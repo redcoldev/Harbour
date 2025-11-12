@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Report</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    .header { margin-bottom: 20px; }
+    .form { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+    input, button { padding: 10px; font-size: 16px; }
+    button { background: rgb(227,82,5); color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .exports { margin: 20px 0; }
+    .exports a { margin-right: 10px; color: rgb(227,82,5); font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/">← Back to Dashboard</a>
+    <h1>Client Report</h1>
+  </div>
+
+  <div class="form">
+    <input type="text" id="clientCode" placeholder="Enter Client Code" value="{{ client_code }}">
+    <button onclick="location.href='?client_code=' + document.getElementById('clientCode').value">Generate</button>
+  </div>
+
+  {% if client_code %}
+  <div class="exports">
+    <a href="/export_excel?client_code={{ client_code }}">📊 Download Excel</a>
+    <a href="/export_pdf?client_code={{ client_code }}">🖨️ Download PDF</a>
+  </div>
+  {% endif %}
+
+  <div>
+    {{ report_html | safe }}
+  </div>
+</body>
+</html>
