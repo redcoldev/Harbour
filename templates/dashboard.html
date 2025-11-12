@@ -42,6 +42,8 @@
     .modal form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .modal .full { grid-column: 1 / -1; }
     .modal button { grid-column: 1 / -1; margin-top: 10px; }
+    a { color: #007bff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -64,17 +66,27 @@
       {% if selected_case and case_client %}
       <div class="info-box">
         <h3>Client: {{ case_client.business_name }}</h3>
-        <p><strong>Contact:</strong> {{ case_client.contact_first }} {{ case_client.contact_last }} | {{ case_client.phone }} | {{ case_client.email }}</p>
+        <p><strong>Contact:</strong> 
+          {{ case_client.contact_first }} {{ case_client.contact_last }} | 
+          <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a> | 
+          <a href="mailto:{{ case_client.email }}">{{ case_client.email }}</a>
+        </p>
         <p><strong>BACS:</strong> {{ case_client.bacs_details or '—' }}</p>
         <hr>
         <h3>Debtor: {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}</h3>
         <p><strong>Type:</strong> {{ selected_case.debtor_business_type }}</p>
+        <p><strong>Contact:</strong> 
+          {{ selected_case.debtor_first }} {{ selected_case.debtor_last }} | 
+          <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a> | 
+          <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
+        </p>
         <p><strong>Status:</strong> {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
         <p><strong>Open Date:</strong> {{ selected_case.open_date }}</p>
 
-        <!-- SELECT ANOTHER CASE FOR THIS CLIENT -->
-        <select onchange="location = '?case_id=' + this.value;" style="width:100%; padding:8px; margin-top:10px;">
-          <option value="">Select another case for this client</option>
+        <!-- TEXT + DROPDOWN -->
+        <p style="margin-top:15px; font-weight:bold;">Select another case for this client:</p>
+        <select onchange="location = '?case_id=' + this.value;" style="width:100%; padding:8px;">
+          <option value="">-- Select another case --</option>
           {% for cc in client_cases %}
             <option value="{{ cc.id }}" {% if selected_case.id == cc.id %}selected{% endif %}>
               {{ cc.debtor_business_name or cc.debtor_first + ' ' + cc.debtor_last }}
