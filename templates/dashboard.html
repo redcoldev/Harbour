@@ -19,11 +19,13 @@
     table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #f5f5f5; }
-    .search-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-    .search-bar select, .search-bar input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .search-form { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
+    .search-form select, .search-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .search-form select { width: 150px; }
+    .search-form input { flex: 1; }
     .result-row { cursor: pointer; }
     .result-row:hover { background: #f0f0f0; }
-    .no-results { color: #777; font-style: italic; }
+    .no-results { color: #777; font-style: italic; padding: 10px 0; }
     .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
     .total-box { background: #eef; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; }
     .balance { font-weight: bold; font-size: 1.2em; color: #d00; margin-top: 15px; }
@@ -86,7 +88,7 @@
       {% if not selected_case %}
       <div class="section half">
         <h3>Search Cases</h3>
-        <div class="search-bar">
+        <div class="search-form">
           <select id="searchField">
             <option value="debtor_name">Debtor Name</option>
             <option value="postcode">Postcode</option>
@@ -95,13 +97,18 @@
             <option value="client_name">Client Name</option>
             <option value="client_code">Client Code</option>
           </select>
-          <input type="text" id="searchInput" placeholder="Type to search..." autocomplete="off">
+          <select id="searchMode">
+            <option value="contains">contains</option>
+            <option value="is">is</option>
+          </select>
+          <input type="text" id="searchInput" placeholder="Enter search term">
+          <button class="btn" onclick="doSearch()">Search</button>
         </div>
         <div id="searchResults"></div>
       </div>
 
       <div class="section half">
-        <p style="color:#777; font-style:italic;">Select a case or search to begin.</p>
+        <p style="color:#777; font-style:italic;">Use the form above to search.</p>
       </div>
       {% endif %}
 
@@ -227,37 +234,37 @@
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     window.onclick = e => { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); }
 
-    let timeout;
-    document.getElementById('searchInput').addEventListener('input', () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        const q = document.getElementById('searchInput').value.trim();
-        const field = document.getElementById('searchField').value;
-        if (q.length < 2) { document.getElementById('searchResults').innerHTML = ''; return; }
+    function doSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      const field = document.getElementById('searchField').value;
+      const mode = document.getElementById('searchMode').value;
+      if (!q) { document.getElementById('searchResults').innerHTML = '<p class="no-results">Please enter a search term.</p>'; return; }
 
-        fetch(`/search?q=${encodeURIComponent(q)}&field=${field}`)
-          .then(r => r.json())
-          .then(results => {
-            let html = '<table><tr><th>Client Code</th><th>Client</th><th>Debtor</th><th>Postcode</th><th>Email</th><th>Phone</th></tr>';
-            if (results.length === 0) {
-              html += '<tr><td colspan="6" class="no-results">No cases found</td></tr>';
-            } else {
-              results.forEach(r => {
-                html += `<tr class="result-row" onclick="location='?case_id=${r.case_id}'">
-                  <td>${r.client_code}</td>
-                  <td>${r.client}</td>
-                  <td>${r.debtor}</td>
-                  <td>${r.postcode}</td>
-                  <td>${r.email}</td>
-                  <td>${r.phone}</td>
-                </tr>`;
-              });
-            }
-            html += '</table>';
-            document.getElementById('searchResults').innerHTML = html;
-          });
-      }, 300);
-    });
+      fetch(`/search?q=${encodeURIComponent(q)}&field=${field}&mode=${mode}`)
+        .then(r => r.json())
+        .then(results => {
+          let html = '<table><tr><th>Client Code</th><th>Client</th><th>Debtor</th><th>Postcode</th><th>Email</th><th>Phone</th></tr>';
+          if (results.length === 0) {
+            html += '<tr><td colspan="6" class="no-results">No cases found</td></tr>';
+          } else {
+            results.forEach(r => {
+              html += `<tr class="result-row" onclick="location='?case_id=${r.case_id}'">
+                <td>${r.client_code}</td>
+                <td>${r.client}</td>
+                <td>${r.debtor}</td>
+                <td>${r.postcode}</td>
+                <td>${r.email}</td>
+                <td>${r.phone}</td>
+              </tr>`;
+            });
+          }
+          html += '</table>';
+          document.getElementById('searchResults').innerHTML = html;
+        })
+        .catch(() => {
+          document.getElementById('searchResults').innerHTML = '<p class="no-results">Search error.</p>';
+        });
+    }
   </script>
 </body>
 </html>
