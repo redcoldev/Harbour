@@ -39,98 +39,108 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    if not os.path.exists(DB):
-        db = get_db()
-        c = db.cursor()
+    db = sqlite3.connect(DB)
+    c = db.cursor()
 
-        c.execute('''
-        CREATE TABLE clients (
-            id INTEGER PRIMARY KEY,
-            business_type TEXT NOT NULL,
-            business_name TEXT NOT NULL,
-            contact_first TEXT,
-            contact_last TEXT,
-            phone TEXT,
-            email TEXT,
-            street TEXT,
-            street2 TEXT,
-            city TEXT,
-            postcode TEXT,
-            country TEXT,
-            bacs_details TEXT,
-            custom1 TEXT,
-            custom2 TEXT,
-            custom3 TEXT,
-            default_interest_rate REAL DEFAULT 0.0
-        )
-        ''')
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS clients (
+        id INTEGER PRIMARY KEY,
+        business_type TEXT NOT NULL,
+        business_name TEXT NOT NULL,
+        contact_first TEXT,
+        contact_last TEXT,
+        phone TEXT,
+        email TEXT,
+        street TEXT,
+        street2 TEXT,
+        city TEXT,
+        postcode TEXT,
+        country TEXT,
+        bacs_details TEXT,
+        custom1 TEXT,
+        custom2 TEXT,
+        custom3 TEXT,
+        default_interest_rate REAL DEFAULT 0.0
+    )
+    ''')
 
-        c.execute('''
-        CREATE TABLE cases (
-            id INTEGER PRIMARY KEY,
-            client_id INTEGER NOT NULL,
-            debtor_business_type TEXT,
-            debtor_business_name TEXT,
-            debtor_first TEXT,
-            debtor_last TEXT,
-            phone TEXT,
-            email TEXT,
-            street TEXT,
-            street2 TEXT,
-            city TEXT,
-            postcode TEXT,
-            country TEXT,
-            status TEXT DEFAULT 'Open',
-            substatus TEXT,
-            open_date TEXT DEFAULT (date('now')),
-            custom1 TEXT,
-            custom2 TEXT,
-            custom3 TEXT,
-            interest_rate REAL,
-            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
-        )
-        ''')
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS cases (
+        id INTEGER PRIMARY KEY,
+        client_id INTEGER NOT NULL,
+        debtor_business_type TEXT,
+        debtor_business_name TEXT,
+        debtor_first TEXT,
+        debtor_last TEXT,
+        phone TEXT,
+        email TEXT,
+        street TEXT,
+        street2 TEXT,
+        city TEXT,
+        postcode TEXT,
+        country TEXT,
+        status TEXT DEFAULT 'Open',
+        substatus TEXT,
+        open_date TEXT DEFAULT (date('now')),
+        custom1 TEXT,
+        custom2 TEXT,
+        custom3 TEXT,
+        interest_rate REAL,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    )
+    ''')
 
-        c.execute('''
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password_hash BLOB NOT NULL,
-            role TEXT DEFAULT 'user'
-        )
-        ''')
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash BLOB NOT NULL,
+        role TEXT DEFAULT 'user'
+    )
+    ''')
 
-        c.execute('''
-        CREATE TABLE money (
-            id INTEGER PRIMARY KEY,
-            case_id INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            amount REAL NOT NULL,
-            transaction_date TEXT DEFAULT (date('now')),
-            created_by INTEGER NOT NULL,
-            note TEXT,
-            FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
-            FOREIGN KEY (created_by) REFERENCES users(id)
-        )
-        ''')
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS money (
+        id INTEGER PRIMARY KEY,
+        case_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        transaction_date TEXT DEFAULT (date('now')),
+        created_by INTEGER NOT NULL,
+        note TEXT,
+        FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+    ''')
 
-        c.execute('''
-        CREATE TABLE notes (
-            id INTEGER PRIMARY KEY,
-            case_id INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            created_by INTEGER NOT NULL,
-            note TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
-            FOREIGN KEY (created_by) REFERENCES users(id)
-        )
-        ''')
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY,
+        case_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        created_by INTEGER NOT NULL,
+        note TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+    ''')
 
+    # Create admin if not exists
+    c.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+    if c.fetchone()[0] == 0:
         hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt())
         c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('admin', hashed, 'admin'))
-        db.commit()
-        db.close()
+
+    db.commit()
+    db.close()
+
+# CALL init_db() ON FIRST REQUEST
+@app.before_request
+def before_request():
+    if not hasattr(app, 'db_initialized'):
+        init_db()
+        app.db_initialized = True
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -148,6 +158,7 @@ def login():
         flash('Invalid credentials')
     return render_template('login.html')
 
+@app.route('/')
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -212,5 +223,4 @@ def dashboard():
                            totals=totals)
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
