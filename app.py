@@ -5,9 +5,10 @@ import bcrypt
 import os
 from datetime import date, datetime, timedelta
 import random
-import pandas as pd
 from io import BytesIO
 from weasyprint import HTML
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, Border, Side
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -381,11 +382,11 @@ def report():
         <tr>
             <td>{case_id}</td>
             <td>{data['debtor']}</td>
-            <td>£{data['Invoice']:.2f}</td>
-            <td>£{data['Payment']:.2f}</td>
-            <td>£{data['Charge']:.2f}</td>
-            <td>£{data['Interest']:.2f}</td>
-            <td>£{balance:.2f}</td>
+            <td>£{data['Invoice']:,.2f}</td>
+            <td>£{data['Payment']:,.2f}</td>
+            <td>£{data['Charge']:,.2f}</td>
+            <td>£{data['Interest']:,.2f}</td>
+            <td>£{balance:,.2f}</td>
         </tr>
         """
         for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
@@ -395,11 +396,11 @@ def report():
     html += f"""
         <tr style="font-weight:bold; background:#eef;">
             <td colspan="2">TOTALS</td>
-            <td>£{grand['Invoice']:.2f}</td>
-            <td>£{grand['Payment']:.2f}</td>
-            <td>£{grand['Charge']:.2f}</td>
-            <td>£{grand['Interest']:.2f}</td>
-            <td>£{grand_balance:.2f}</td>
+            <td>£{grand['Invoice']:,.2f}</td>
+            <td>£{grand['Payment']:,.2f}</td>
+            <td>£{grand['Charge']:,.2f}</td>
+            <td>£{grand['Interest']:,.2f}</td>
+            <td>£{grand_balance:,.2f}</td>
         </tr>
     </table>
     """
@@ -434,17 +435,41 @@ def export_excel():
         if r['type']:
             cases[case_id][r['type']] += r['amount']
 
-    data = []
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Client Report"
+
+    # Header
+    ws.append(['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance'])
+    header = ws[1]
+    for cell in header:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='center')
+
+    # Data
+    grand = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
     for case_id, d in cases.items():
         balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
-        data.append([case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance])
+        ws.append([case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance])
+        for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
+            grand[t] += d[t]
 
-    df = pd.DataFrame(data, columns=['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance'])
-    df.loc['Total'] = ['', 'TOTALS', df['Invoice'].sum(), df['Payment'].sum(), df['Charge'].sum(), df['Interest'].sum(), df['Balance'].sum()]
+    # Totals
+    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
+    total_row = ['TOTALS', '', grand['Invoice'], grand['Payment'], grand['Charge'], grand['Interest'], grand_balance]
+    ws.append(total_row)
+    for i, val in enumerate(total_row):
+        if i > 1:
+            ws.cell(row=ws.max_row, column=i+1).number_format = '#,##0.00'
+
+    # Format
+    thin = Side(border_style="thin")
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+        for cell in row:
+            cell.border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
+    wb.save(output)
     output.seek(0)
     return send_file(output, download_name=f"report_client_{client_code}.xlsx", as_attachment=True)
 
@@ -490,11 +515,11 @@ def export_pdf():
         <tr>
             <td>{case_id}</td>
             <td>{d['debtor']}</td>
-            <td>£{d['Invoice']:.2f}</td>
-            <td>£{d['Payment']:.2f}</td>
-            <td>£{d['Charge']:.2f}</td>
-            <td>£{d['Interest']:.2f}</td>
-            <td>£{balance:.2f}</td>
+            <td>£{d['Invoice']:,.2f}</td>
+            <td>£{d['Payment']:,.2f}</td>
+            <td>£{d['Charge']:,.2f}</td>
+            <td>£{d['Interest']:,.2f}</td>
+            <td>£{balance:,.2f}</td>
         </tr>
         """
     grand = {t: sum(c[t] for c in cases.values()) for t in ['Invoice','Payment','Charge','Interest']}
@@ -502,11 +527,11 @@ def export_pdf():
     html += f"""
         <tr style="font-weight:bold; background:#eee;">
             <td colspan="2">TOTALS</td>
-            <td>£{grand['Invoice']:.2f}</td>
-            <td>£{grand['Payment']:.2f}</td>
-            <td>£{grand['Charge']:.2f}</td>
-            <td>£{grand['Interest']:.2f}</td>
-            <td>£{grand_balance:.2f}</td>
+            <td>£{grand['Invoice']:,.2f}</td>
+            <td>£{grand['Payment']:,.2f}</td>
+            <td>£{grand['Charge']:,.2f}</td>
+            <td>£{grand['Interest']:,.2f}</td>
+            <td>£{grand_balance:,.2f}</td>
         </tr>
     </table>
     """
