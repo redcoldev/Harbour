@@ -3,6 +3,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import sqlite3
 import bcrypt
 import os
+from datetime import date, datetime, timedelta
+import random
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -42,6 +44,7 @@ def init_db():
         db = sqlite3.connect(DB)
         c = db.cursor()
 
+        # TABLES
         c.execute('''
         CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY,
@@ -126,10 +129,80 @@ def init_db():
         )
         ''')
 
-        c.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+        # ADMIN
+        c.execute("SELECT COUNT(*) FROM users")
         if c.fetchone()[0] == 0:
             hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt())
             c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('admin', hashed, 'admin'))
+
+        # DUMMY DATA
+        c.execute("SELECT COUNT(*) FROM clients")
+        if c.fetchone()[0] == 0:
+            clients = [
+                ("Limited", "Acme Corp", "John", "Doe", "01234 567890", "john@acme.com", "8.5"),
+                ("Sole Trader", "Bob's Plumbing", "Bob", "Smith", "07700 900123", "bob@plumb.co.uk", "7.0"),
+                ("Partnership", "Green & Co", "Sarah", "Green", "020 7946 0001", "sarah@green.co", "6.5"),
+                ("Individual", "Freelance Designs", "Alex", "Taylor", "07890 123456", "alex@design.com", "9.0"),
+                ("Limited", "Tech Solutions Ltd", "Mike", "Brown", "0113 496 0002", "mike@techsol.co.uk", "8.0")
+            ]
+            client_ids = []
+            for cl in clients:
+                c.execute('''
+                    INSERT INTO clients (business_type, business_name, contact_first, contact_last, phone, email, default_interest_rate)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', cl)
+                client_ids.append(c.lastrowid)
+
+            # 5 cases per client
+            debtor_types = ["Individual", "Sole Trader", "Limited", "Partnership"]
+            statuses = ["Open", "On Hold", "Closed"]
+            for client_id in client_ids:
+                for i in range(5):
+                    debtor_type = random.choice(debtor_types)
+                    first = random.choice(["Emma", "James", "Olivia", "Liam", "Noah", "Ava"])
+                    last = random.choice(["Wilson", "Davis", "Martinez", "Lee", "Clark", "Walker"])
+                    business = f"{first} {last} Ltd" if debtor_type in ["Limited", "Partnership"] else None
+                    c.execute('''
+                        INSERT INTO cases 
+                        (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last, phone, email, postcode, status, substatus, interest_rate)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        client_id, debtor_type, business, first, last,
+                        f"07{random.randint(100,999)} {random.randint(100000,999999)}",
+                        f"{first.lower()}.{last.lower()}@example.com",
+                        f"SW1A {random.randint(1,9)}AA",
+                        random.choice(statuses),
+                        random.choice(["Awaiting Docs", "In Court", "Payment Plan", None]),
+                        float(clients[client_ids.index(client_id)][6])
+                    ))
+                    case_id = c.lastrowid
+
+                    # 3-7 transactions per case
+                    for _ in range(random.randint(3,7)):
+                        typ = random.choice(["Invoice", "Payment", "Charge", "Interest"])
+                        amount = round(random.uniform(50, 1500), 2)
+                        days_ago = random.randint(1, 180)
+                        tx_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+                        c.execute('''
+                            INSERT INTO money (case_id, type, amount, created_by, transaction_date, note)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ''', (case_id, typ, amount, 1, tx_date, f"{typ} entry" if random.random() > 0.5 else None))
+
+                    # 2-5 notes per case
+                    for _ in range(random.randint(2,5)):
+                        note_type = random.choice(["General", "Inbound Call", "Outbound Call", "Dispute"])
+                        note_text = random.choice([
+                            "Customer called to discuss balance",
+                            "Sent reminder letter",
+                            "Payment plan agreed",
+                            "Dispute raised – awaiting proof",
+                            "Left voicemail"
+                        ])
+                        note_date = (datetime.now() - timedelta(days=random.randint(1, 120))).strftime('%Y-%m-%d %H:%M:%S')
+                        c.execute('''
+                            INSERT INTO notes (case_id, type, created_by, note, created_at)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (case_id, note_type, 1, note_text, note_date))
 
         db.commit()
         db.close()
@@ -139,8 +212,7 @@ def init_db():
 def before_request():
     init_db()
 
-# === FORMS ===
-
+# === FORMS (same as before) ===
 @app.route('/add_client', methods=['POST'])
 @login_required
 def add_client():
