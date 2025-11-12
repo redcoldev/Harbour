@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, send_file, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 import bcrypt
 import os
 from datetime import date, datetime, timedelta
 import random
+import pandas as pd
+from io import BytesIO
+from weasyprint import HTML
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -284,7 +287,7 @@ def add_note():
 def search():
     query = request.args.get('q', '').strip()
     field = request.args.get('field', 'debtor_first').strip()
-    mode = request.args.get('mode', 'contains')  # 'is' or 'contains'
+    mode = request.args.get('mode', 'contains')
 
     if not query:
         return jsonify([])
@@ -328,6 +331,191 @@ def search():
         'email': r['email'] or '',
         'phone': r['phone'] or ''
     } for r in results])
+
+# === REPORTS ===
+@app.route('/report')
+@login_required
+def report():
+    client_code = request.args.get('client_code', '').strip()
+    db = get_db()
+    c = db.cursor()
+
+    if not client_code:
+        return render_template('report.html', report_html='', client_code='')
+
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return render_template('report.html', report_html='<p>Client not found.</p>', client_code=client_code)
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+        ORDER BY s.id, m.transaction_date
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    html = f"""
+    <h2>Client Report: {client['business_name']} (ID: {client['id']})</h2>
+    <table border="1" style="width:100%; border-collapse:collapse; font-family:Arial; font-size:14px;">
+        <tr style="background:#f5f5f5;">
+            <th>Case ID</th><th>Debtor</th><th>Invoice</th><th>Payment</th><th>Charge</th><th>Interest</th><th>Balance</th>
+        </tr>
+    """
+    grand = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+    for case_id, data in cases.items():
+        balance = data['Invoice'] + data['Charge'] + data['Interest'] - data['Payment']
+        html += f"""
+        <tr>
+            <td>{case_id}</td>
+            <td>{data['debtor']}</td>
+            <td>£{data['Invoice']:.2f}</td>
+            <td>£{data['Payment']:.2f}</td>
+            <td>£{data['Charge']:.2f}</td>
+            <td>£{data['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
+        </tr>
+        """
+        for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
+            grand[t] += data[t]
+
+    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
+    html += f"""
+        <tr style="font-weight:bold; background:#eef;">
+            <td colspan="2">TOTALS</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
+        </tr>
+    </table>
+    """
+    return render_template('report.html', report_html=html, client_code=client_code)
+
+@app.route('/export_excel')
+@login_required
+def export_excel():
+    client_code = request.args.get('client_code')
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return "Client not found", 404
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    data = []
+    for case_id, d in cases.items():
+        balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
+        data.append([case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance])
+
+    df = pd.DataFrame(data, columns=['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance'])
+    df.loc['Total'] = ['', 'TOTALS', df['Invoice'].sum(), df['Payment'].sum(), df['Charge'].sum(), df['Interest'].sum(), df['Balance'].sum()]
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name=f"report_client_{client_code}.xlsx", as_attachment=True)
+
+@app.route('/export_pdf')
+@login_required
+def export_pdf():
+    client_code = request.args.get('client_code')
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return "Client not found", 404
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    html = f"""
+    <h1>Client Report: {client['business_name']} (ID: {client['id']})</h1>
+    <table border="1" style="width:100%; border-collapse:collapse; font-family:Arial; font-size:12px;">
+        <tr style="background:#ddd;">
+            <th>Case ID</th><th>Debtor</th><th>Invoice</th><th>Payment</th><th>Charge</th><th>Interest</th><th>Balance</th>
+        </tr>
+    """
+    for case_id, d in cases.items():
+        balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
+        html += f"""
+        <tr>
+            <td>{case_id}</td>
+            <td>{d['debtor']}</td>
+            <td>£{d['Invoice']:.2f}</td>
+            <td>£{d['Payment']:.2f}</td>
+            <td>£{d['Charge']:.2f}</td>
+            <td>£{d['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
+        </tr>
+        """
+    grand = {t: sum(c[t] for c in cases.values()) for t in ['Invoice','Payment','Charge','Interest']}
+    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
+    html += f"""
+        <tr style="font-weight:bold; background:#eee;">
+            <td colspan="2">TOTALS</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
+        </tr>
+    </table>
+    """
+
+    pdf = HTML(string=html).write_pdf()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=report_client_{client_code}.pdf'
+    return response
 
 # === DASHBOARD ===
 @app.route('/')
@@ -411,4 +599,3 @@ def login():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
