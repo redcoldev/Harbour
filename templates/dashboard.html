@@ -246,9 +246,9 @@
         {% endfor %}
       </div>
 
-      <div class="balance">
-        Balance: £{{ "%.2f"|format(balance) }}
-      </div>
+<div class="balance">
+    Balance: {{ balance }}
+</div>
       {% else %}
       <p style="color:#777; font-style:italic; text-align:center; margin-top:50px;">Select a case to view transactions</p>
       {% endif %}
@@ -367,4 +367,5 @@
   </script>
 </body>
 </html>
+
 
