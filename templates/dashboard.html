@@ -3,24 +3,23 @@
 <head>
   <title>Debt CRM</title>
   <style>
-    body { margin:0; font-family: Arial; background: #f9f9f9; }
+    body { margin:0; font-family: Arial; background: #f9f9f9; font-size: 14px; }
+    h1, h2, h3, h4, h5, h6 { font-size: 1.4em; margin: 0 0 8px; color: #333; font-weight: bold; }
     .header { height: 80px; background: rgb(91, 103, 112); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .header img { height: 60px; }
     .header .btn-group { display: flex; gap: 10px; }
-    .btn { background: rgb(227,82,5); color: white; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
+    .btn { background: rgb(227,82,5); color: white; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
     .container { display: flex; height: calc(100vh - 80px); }
     .left { width: 66%; display: flex; flex-direction: column; }
-    .right { width: 34%; background: #fff; border-left: 1px solid #ddd; padding: 15px; }
-    .info-box { background: #eef5ff; padding: 18px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-size: 1.05em; }
-    .info-box h3 { margin: 0 0 10px; color: #333; }
+    .right { width: 34%; background: #fff; border-left: 1px solid #ddd; padding: 15px; display: flex; flex-direction: column; }
+    .info-box { background: #eef5ff; padding: 18px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .info-box p { margin: 4px 0; }
-    .section { padding: 15px; border-bottom: 1px solid #eee; }
-    .half { height: 50%; overflow-y: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    .section { padding: 15px; border-bottom: 1px solid #eee; flex: 1; display: flex; flex-direction: column; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; flex: 1; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #f5f5f5; }
     .search-form { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
-    .search-form select, .search-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .search-form select, .search-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
     .search-form select { width: 150px; }
     .search-form input { flex: 1; }
     .result-row { cursor: pointer; }
@@ -48,22 +47,26 @@
       text-decoration: underline;
     }
 
-    /* ADD BAR (BOTTOM) */
+    /* PINNED ADD BARS */
+    .add-bar-container {
+      position: sticky;
+      bottom: 0;
+      background: #f8f9fa;
+      border-top: 1px solid #ddd;
+      padding: 12px 15px;
+    }
     .add-bar {
       display: grid;
       grid-template-columns: 1fr 2fr auto;
       gap: 10px;
       align-items: center;
-      padding: 12px 15px;
-      background: #f8f9fa;
-      border-top: 1px solid #ddd;
     }
     .add-bar select, .add-bar input, .add-bar textarea, .add-bar button {
       height: 40px;
       padding: 0 10px;
       border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 0.95em;
+      font-size: 14px;
     }
     .add-bar select { width: 100%; }
     .add-bar input[type="number"] { width: 100px; }
@@ -123,7 +126,7 @@
 
       <!-- NO CASE: SEARCH -->
       {% if not selected_case %}
-      <div class="section half">
+      <div class="section">
         <h3>Search Cases</h3>
         <div class="search-form">
           <select id="searchField">
@@ -144,17 +147,17 @@
         <div id="searchResults"></div>
       </div>
 
-      <div class="section half">
+      <div class="section">
         <p style="color:#777; font-style:italic;">Use the form above to search.</p>
       </div>
       {% endif %}
 
       <!-- NOTES (BOTTOM LEFT) -->
       {% if selected_case %}
-      <div class="section half" style="display:flex; flex-direction:column;">
+      <div class="section">
         <h3>Notes</h3>
         <div style="flex:1; overflow-y:auto;">
-          <table style="margin-top:12px;">
+          <table>
             <tr><th>Date</th><th>Type</th><th class="note-text-cell">Note</th><th>User</th></tr>
             {% for note in notes %}
               <tr>
@@ -169,18 +172,20 @@
           </table>
         </div>
 
-        <!-- ADD NOTE BAR -->
-        <form action="/add_note" method="post" class="add-bar">
-          <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-          <select name="type">
-            <option>General</option>
-            <option>Dispute</option>
-            <option>Inbound Call</option>
-            <option>Outbound Call</option>
-          </select>
-          <textarea name="note" placeholder="Enter note..." required></textarea>
-          <button type="submit">Add</button>
-        </form>
+        <!-- ADD NOTE BAR (PINNED BOTTOM) -->
+        <div class="add-bar-container">
+          <form action="/add_note" method="post" class="add-bar">
+            <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+            <select name="type">
+              <option>General</option>
+              <option>Dispute</option>
+              <option>Inbound Call</option>
+              <option>Outbound Call</option>
+            </select>
+            <textarea name="note" placeholder="Enter note..." required></textarea>
+            <button type="submit">Add</button>
+          </form>
+        </div>
       </div>
       {% endif %}
 
@@ -191,21 +196,23 @@
       <h3>Transactions</h3>
 
       {% if selected_case %}
-      <!-- ADD TRANSACTION BAR -->
-      <form action="/add_transaction" method="post" class="add-bar" style="margin-bottom:15px;">
-        <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-        <select name="type">
-          <option>Invoice</option>
-          <option>Payment</option>
-          <option>Charge</option>
-          <option>Interest</option>
-        </select>
-        <input name="amount" type="number" step="0.01" placeholder="Amount" required>
-        <input name="note" placeholder="Note">
-        <button type="submit">Add</button>
-      </form>
+      <!-- ADD TRANSACTION BAR (PINNED BOTTOM) -->
+      <div class="add-bar-container">
+        <form action="/add_transaction" method="post" class="add-bar" style="margin-bottom:0;">
+          <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+          <select name="type">
+            <option>Invoice</option>
+            <option>Payment</option>
+            <option>Charge</option>
+            <option>Interest</option>
+          </select>
+          <input name="amount" type="number" step="0.01" placeholder="Amount" required>
+          <input name="note" placeholder="Note">
+          <button type="submit">Add</button>
+        </form>
+      </div>
 
-      <div style="flex:1; overflow-y:auto;">
+      <div style="flex:1; overflow-y:auto; margin-bottom:15px;">
         <table>
           <tr><th>Date</th><th>Type</th><th>Amount</th><th>User</th></tr>
           {% for t in transactions %}
