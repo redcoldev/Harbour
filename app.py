@@ -19,11 +19,11 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    db = get_db()
+    db = get_db()  # Keep open
     c = db.cursor()
     c.execute("SELECT id, username, role FROM users WHERE id = ?", (user_id,))
     row = c.fetchone()
-    db.close()
+    # DO NOT CLOSE HERE
     return User(row[0], row[1], row[2]) if row else None
 
 def get_db():
