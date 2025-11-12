@@ -209,8 +209,49 @@ def add_note():
     db.commit()
     return redirect(url_for('dashboard', case_id=data['case_id']))
 
-# === DASHBOARD ===
+# === SEARCH ===
+@app.route('/search')
+@login_required
+def search():
+    query = request.args.get('q', '').strip()
+    field = request.args.get('field', 'debtor_first').strip()
 
+    db = get_db()
+    c = db.cursor()
+
+    field_map = {
+        'debtor_name': "(s.debtor_first || ' ' || s.debtor_last)",
+        'postcode': "s.postcode",
+        'email': "s.email",
+        'phone': "s.phone",
+        'client_name': "c.business_name"
+    }
+    col = field_map.get(field, "s.debtor_first")
+
+    sql = f"""
+        SELECT s.id as case_id, c.business_name, 
+               s.debtor_first, s.debtor_last, s.debtor_business_name,
+               s.postcode, s.email, s.phone
+        FROM cases s
+        JOIN clients c ON s.client_id = c.id
+        WHERE {col} LIKE ?
+        ORDER BY c.business_name, s.id
+        LIMIT 20
+    """
+    c.execute(sql, (f'%{query}%',))
+    results = c.fetchall()
+    db.close()
+
+    return jsonify([{
+        'case_id': r['case_id'],
+        'client': r['business_name'],
+        'debtor': r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}",
+        'postcode': r['postcode'] or '',
+        'email': r['email'] or '',
+        'phone': r['phone'] or ''
+    } for r in results])
+
+# === DASHBOARD ===
 @app.route('/')
 @app.route('/dashboard')
 @login_required
