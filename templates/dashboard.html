@@ -15,47 +15,47 @@
     .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .total-box { background: #eef; padding: 10px; border-radius: 5px; text-align: center; }
     .balance { font-weight: bold; font-size: 1.2em; color: #d00; }
-    a { color: #007bff; text-decoration: none; }
-    select { width: 100%; padding: 10px; margin-bottom: 10px; }
+    select, input, button { padding: 8px; margin: 5px 0; }
+    .btn { background: #007bff; color: white; border: none; cursor: pointer; padding: 8px 12px; border-radius: 4px; }
+    .btn-small { font-size: 0.8em; padding: 4px 8px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto; }
+    .close { float: right; font-size: 1.5em; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- LEFT 2/3 -->
     <div class="left">
-      <!-- Client & Case Details (Top) -->
       <div class="section half">
+        <button class="btn" onclick="openModal('clientModal')">+ Add Client</button>
+        <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
+
         <h3>Select Case</h3>
-        <select onchange="if(this.value) location = '?case_id=' + this.value; else location = '/';">
-          <option value="">Select Case...</option>
+        <select onchange="if(this.value) location = '?case_id=' + this.value;">
+          <option value="">-- Select Case --</option>
           {% for case in all_cases if case.case_id %}
             <option value="{{ case.case_id }}" {% if selected_case and selected_case.id == case.case_id %}selected{% endif %}>
-              [{{ case.business_name }}] {{ case.debtor_business_name or (case.debtor_first + ' ' + case.debtor_last) if case.debtor_first else '' }}
+              [{{ case.business_name }}] {{ case.debtor_business_name or (case.debtor_first + ' ' + case.debtor_last) }}
             </option>
           {% endfor %}
         </select>
 
         {% if selected_case and case_client %}
-          <h4>Client: {{ case_client.business_name }} ({{ case_client.business_type }})</h4>
-          <p>Contact: {{ case_client.contact_first }} {{ case_client.contact_last }} | {{ case_client.phone }} | {{ case_client.email }}</p>
+          <h4>Client: {{ case_client.business_name }}</h4>
+          <p>{{ case_client.contact_first }} {{ case_client.contact_last }} | {{ case_client.email }}</p>
           <h4>Debtor: {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}</h4>
-          <p>Type: {{ selected_case.debtor_business_type }} | Status: {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
-          <p>Open: {{ selected_case.open_date }} | Rate: {{ selected_case.interest_rate }}%</p>
+          <p>Status: {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
+          <button class="btn btn-small" onclick="openModal('transactionModal')">+ Transaction</button>
+          <button class="btn btn-small" onclick="openModal('noteModal')">+ Note</button>
         {% endif %}
       </div>
 
-      <!-- Notes History (Bottom) -->
       <div class="section half">
         <h3>Notes</h3>
         <table>
           <tr><th>Date</th><th>Type</th><th>User</th><th>Note</th></tr>
           {% for note in notes %}
-            <tr>
-              <td>{{ note.created_at[:16] }}</td>
-              <td>{{ note.type }}</td>
-              <td>{{ note.username }}</td>
-              <td>{{ note.note }}</td>
-            </tr>
+            <tr><td>{{ note.created_at[:16] }}</td><td>{{ note.type }}</td><td>{{ note.username }}</td><td>{{ note.note }}</td></tr>
           {% else %}
             <tr><td colspan="4">No notes</td></tr>
           {% endfor %}
@@ -63,30 +63,20 @@
       </div>
     </div>
 
-    <!-- RIGHT 1/3 -->
     <div class="right">
       <h3>Transactions</h3>
       <table>
-        <tr><th>Date</th><th>Type</th><th>Amount</th><th>User</th><th>Note</th></tr>
+        <tr><th>Date</th><th>Type</th><th>Amount</th><th>User</th></tr>
         {% for t in transactions %}
-          <tr>
-            <td>{{ t.transaction_date }}</td>
-            <td>{{ t.type }}</td>
-            <td>£{{ "%.2f"|format(t.amount) }}</td>
-            <td>{{ t.username }}</td>
-            <td>{{ t.note or '' }}</td>
-          </tr>
+          <tr><td>{{ t.transaction_date }}</td><td>{{ t.type }}</td><td>£{{ "%.2f"|format(t.amount) }}</td><td>{{ t.username }}</td></tr>
         {% else %}
-          <tr><td colspan="5">No transactions</td></tr>
+          <tr><td colspan="4">No transactions</td></tr>
         {% endfor %}
       </table>
 
       <div class="totals">
-        {% for typ, amt in totals.items() if amt != 0 %}
-          <div class="total-box">
-            <strong>{{ typ }}</strong><br>
-            £{{ "%.2f"|format(amt) }}
-          </div>
+        {% for typ, amt in totals.items() if amt > 0 %}
+          <div class="total-box"><strong>{{ typ }}</strong><br>£{{ "%.2f"|format(amt) }}</div>
         {% endfor %}
       </div>
 
@@ -95,5 +85,99 @@
       </div>
     </div>
   </div>
+
+  <!-- MODALS -->
+  <div id="clientModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('clientModal')">×</span>
+      <h3>Add Client</h3>
+      <form action="/add_client" method="post">
+        <select name="business_type" required>
+          <option value="Limited">Limited</option>
+          <option value="Partnership">Partnership</option>
+          <option value="Sole Trader">Sole Trader</option>
+          <option value="Individual">Individual</option>
+        </select>
+        <input name="business_name" placeholder="Business Name" required>
+        <input name="contact_first" placeholder="First Name">
+        <input name="contact_last" placeholder="Last Name">
+        <input name="phone" placeholder="Phone">
+        <input name="email" placeholder="Email">
+        <input name="bacs_details" placeholder="BACS Details">
+        <input name="default_interest_rate" type="number" step="0.01" placeholder="Default Rate %" value="0">
+        <button type="submit" class="btn">Save Client</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="caseModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('caseModal')">×</span>
+      <h3>Add Case</h3>
+      <form action="/add_case" method="post">
+        <select name="client_id" required>
+          <option value="">Select Client</option>
+          {% for client in clients %}
+            <option value="{{ client.id }}">{{ client.business_name }}</option>
+          {% endfor %}
+        </select>
+        <select name="debtor_business_type">
+          <option value="Limited">Limited</option>
+          <option value="Partnership">Partnership</option>
+          <option value="Sole Trader">Sole Trader</option>
+          <option value="Individual">Individual</option>
+        </select>
+        <input name="debtor_business_name" placeholder="Debtor Business">
+        <input name="debtor_first" placeholder="First Name">
+        <input name="debtor_last" placeholder="Last Name">
+        <input name="phone" placeholder="Phone">
+        <input name="email" placeholder="Email">
+        <button type="submit" class="btn">Save Case</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="transactionModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('transactionModal')">×</span>
+      <h3>Add Transaction</h3>
+      <form action="/add_transaction" method="post">
+        <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+        <select name="type" required>
+          <option>Invoice</option>
+          <option>Payment</option>
+          <option>Charge</option>
+          <option>Interest</option>
+        </select>
+        <input name="amount" type="number" step="0.01" placeholder="Amount" required>
+        <input name="note" placeholder="Note">
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="noteModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('noteModal')">×</span>
+      <h3>Add Note</h3>
+      <form action="/add_note" method="post">
+        <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+        <select name="type" required>
+          <option>General</option>
+          <option>Dispute</option>
+          <option>Inbound Call</option>
+          <option>Outbound Call</option>
+        </select>
+        <textarea name="note" placeholder="Note" required></textarea>
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.style.display = 'none'; }
+  </script>
 </body>
 </html>
