@@ -126,8 +126,13 @@
           <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a> | 
           <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
         </p>
-        <p><strong>Status:</strong> {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
-        <p><strong>Next Action:</strong> {{ format_date(selected_case.next_action_date) }}</p>
+        <p><strong>Status:</strong> {{ selected_case.status }}</p>
+        {% if selected_case.substatus %}
+          <p><strong>Substatus:</strong> {{ selected_case.substatus }}</p>
+        {% endif %}
+        {% if selected_case.next_action_date %}
+          <p><strong>Next Action:</strong> {{ format_date(selected_case.next_action_date) }}</p>
+        {% endif %}
         <p><strong>Open Date:</strong> {{ format_date(selected_case.open_date) }}</p>
 
         <!-- TEXT + DROPDOWN -->
@@ -427,3 +432,4 @@
   </script>
 </body>
 </html>
+
