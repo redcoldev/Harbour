@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Debt CRM</title>
+  <title>Helm CRM by Redwood Collections</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
   <style>
     body { margin:0; font-family: Arial; background: #f9f9f9; font-size: 14px; }
     h1, h2, h3, h4, h5, h6 { font-size: 1.4em; margin: 0 0 8px; color: #333; font-weight: bold; }
@@ -99,6 +100,7 @@
       <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
       <button class="btn" onclick="location.href='/report'">Reports</button>
       <button class="btn" onclick="openModal('apiModal')">API Keys</button>
+      <button class="btn" onclick="location.href='/logout'">Logout</button>
     </div>
     <img src="/static/redwood-logo.png" alt="Redwood">
   </div>
@@ -125,7 +127,8 @@
           <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
         </p>
         <p><strong>Status:</strong> {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
-        <p><strong>Open Date:</strong> {{ selected_case.open_date }}</p>
+        <p><strong>Next Action:</strong> {{ format_date(selected_case.next_action_date) }}</p>
+        <p><strong>Open Date:</strong> {{ format_date(selected_case.open_date) }}</p>
 
         <!-- TEXT + DROPDOWN -->
         <p style="margin-top:15px; font-weight:bold;">Select another case for this client:</p>
@@ -177,7 +180,7 @@
             <tr><th class="note-date">Date</th><th class="note-type">Type</th><th class="note-text">Note</th><th class="note-user">User</th></tr>
             {% for note in notes %}
               <tr>
-                <td class="note-date">{{ note.created_at[:16] }}</td>
+                <td class="note-date">{{ format_date(note.created_at[:10]) }}</td>
                 <td class="note-type">{{ note.type }}</td>
                 <td class="note-text">{{ note.note }}</td>
                 <td class="note-user">{{ note.username }}</td>
@@ -233,7 +236,7 @@
           <tr><th class="trans-date">Date</th><th class="trans-type">Type</th><th class="trans-amount">Amount</th><th class="trans-user">User</th></tr>
           {% for t in transactions %}
             <tr>
-              <td class="trans-date">{{ t.transaction_date }}</td>
+              <td class="trans-date">{{ format_date(t.transaction_date) }}</td>
               <td class="trans-type">{{ t.type }}</td>
               <td class="trans-amount">£{{ "%.2f"|format(t.amount) }}</td>
               <td class="trans-user">{{ t.username }}</td>
@@ -307,6 +310,7 @@
         <input name="debtor_last" placeholder="Debtor Last">
         <input name="phone" placeholder="Phone">
         <input name="email" placeholder="Email">
+        <input name="next_action_date" type="date" placeholder="Next Action Date">
         <button type="submit" class="btn full">Save Case</button>
       </form>
     </div>
