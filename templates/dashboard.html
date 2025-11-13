@@ -14,7 +14,6 @@
     .right { width: 34%; background: #fff; border-left: 1px solid #ddd; padding: 15px; display: flex; flex-direction: column; }
     .info-box { background: #eef5ff; padding: 18px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .info-box p { margin: 4px 0; }
-    .info-box .id-line { font-size: 0.9em; color: #555; font-weight: normal; }
     .section { padding: 15px; border-bottom: 1px solid #eee; flex: 1; display: flex; flex-direction: column; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -31,10 +30,10 @@
     .no-results { color: #777; font-style: italic; padding: 10px 0; }
     .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
     .total-box { background: #eef; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; }
-    .balance { font-weight: bold; font-size: 1.2em; color: #000; margin-top: 15px; text-align: center; }
+    .balance { font-weight: bold; font-size: 1.2em; color: #d00; margin-top: 15px; }
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal.active { display: flex; }
-    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 480px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 520px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     .close { float: right; font-size: 1.6em; cursor: pointer; color: #999; }
     .close:hover { color: #000; }
     .modal h3 { margin: 0 0 15px; }
@@ -78,12 +77,15 @@
     .add-bar textarea::placeholder { color: #777; font-size: 14px; line-height: 40px; }
     .add-bar button { background: rgb(227,82,5); color: white; font-weight: bold; }
 
-    /* CLIENT SEARCH IN MODAL */
-    .client-search { margin-bottom: 10px; }
-    .client-search input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-    .client-results { max-height: 150px; overflow-y: auto; border: 1px solid #ddd; background: white; }
+    /* CLIENT SEARCH IN ADD CASE */
+    .client-search-form { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .client-search-form select, .client-search-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .client-search-form select { width: 130px; }
+    .client-search-form input { flex: 1; }
+    .client-results { max-height: 150px; overflow-y: auto; border: 1px solid #ddd; background: white; margin-bottom: 10px; }
     .client-result { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
     .client-result:hover { background: #f0f0f0; }
+    #selectedClient { margin-bottom: 10px; font-weight: bold; color: #333; }
   </style>
 </head>
 <body>
@@ -106,8 +108,7 @@
       <!-- CLIENT / DEBTOR INFO (TOP LEFT) -->
       {% if selected_case and case_client %}
       <div class="info-box">
-        <h3>Client: {{ case_client.business_name }}</h3>
-        <p class="id-line">ID: {{ case_client.id }}</p>
+        <h3>Client: {{ case_client.business_name }} (ID: {{ case_client.id }})</h3>
         <p><strong>Contact:</strong> 
           {{ case_client.contact_first }} {{ case_client.contact_last }} | 
           <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a> | 
@@ -115,19 +116,14 @@
         </p>
         <p><strong>BACS:</strong> {{ case_client.bacs_details or '—' }}</p>
         <hr>
-        <h3>Debtor: {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}</h3>
-        <p class="id-line">ID: {{ selected_case.id }}</p>
+        <h3>Debtor: {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }} (ID: {{ selected_case.id }})</h3>
         <p><strong>Type:</strong> {{ selected_case.debtor_business_type }}</p>
         <p><strong>Contact:</strong> 
           {{ selected_case.debtor_first }} {{ selected_case.debtor_last }} | 
           <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a> | 
           <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
         </p>
-        <hr>
-        <p><strong>Status:</strong> {{ selected_case.status }}</p>
-        {% if selected_case.substatus %}
-        <p><strong>Substatus:</strong> {{ selected_case.substatus }}</p>
-        {% endif %}
+        <p><strong>Status:</strong> {{ selected_case.status }} {% if selected_case.substatus %}({{ selected_case.substatus }}){% endif %}</p>
         <p><strong>Open Date:</strong> {{ selected_case.open_date }}</p>
 
         <!-- TEXT + DROPDOWN -->
@@ -233,17 +229,16 @@
 
       <div style="flex:1; overflow-y:auto;">
         <table>
-          <tr><th class="trans-date">Date</th><th class="trans-type">Type</th><th class="trans-amount">Amount</th><th class="trans-note">Note</th><th class="trans-user">User</th></tr>
+          <tr><th class="trans-date">Date</th><th class="trans-type">Type</th><th class="trans-amount">Amount</th><th class="trans-user">User</th></tr>
           {% for t in transactions %}
             <tr>
               <td class="trans-date">{{ t.transaction_date }}</td>
               <td class="trans-type">{{ t.type }}</td>
               <td class="trans-amount">£{{ "%.2f"|format(t.amount) }}</td>
-              <td class="trans-note">{{ t.note or '' }}</td>
               <td class="trans-user">{{ t.username }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="5">No transactions</td></tr>
+            <tr><td colspan="4">No transactions</td></tr>
           {% endfor %}
         </table>
       </div>
@@ -255,7 +250,7 @@
       </div>
 
       <div class="balance">
-        Balance: {{ balance }}
+        Balance: £{{ "%.2f"|format(balance) }}
       </div>
       {% else %}
       <p style="color:#777; font-style:italic; text-align:center; margin-top:50px;">Select a case to view transactions</p>
@@ -286,13 +281,25 @@
     <div class="modal-content">
       <span class="close" onclick="closeModal('caseModal')">×</span>
       <h3>Add Case</h3>
-      <div class="client-search">
-        <input type="text" id="clientSearch" placeholder="Search client by name or ID..." autocomplete="off">
-        <div id="clientResults" class="client-results"></div>
+
+      <!-- CLIENT SEARCH -->
+      <div class="client-search-form">
+        <select id="clientSearchField">
+          <option value="client_name">Name</option>
+          <option value="client_code">ID</option>
+        </select>
+        <select id="clientSearchMode">
+          <option value="contains">contains</option>
+          <option value="is">is</option>
+        </select>
+        <input type="text" id="clientSearchInput" placeholder="Search client...">
+        <button class="btn" onclick="searchClients()">Search</button>
       </div>
+      <div id="clientResults" class="client-results"></div>
+      <div id="selectedClient"></div>
+
       <form action="/add_case" method="post">
         <input type="hidden" name="client_id" id="selectedClientId" required>
-        <div id="selectedClientName" style="margin-bottom:10px; font-weight:bold;"></div>
         <select name="debtor_business_type"><option>Limited</option><option>Partnership</option><option>Sole Trader</option><option>Individual</option></select>
         <input name="debtor_business_name" placeholder="Debtor Business">
         <input name="debtor_first" placeholder="Debtor First">
@@ -335,42 +342,35 @@
           }
           html += '</table>';
           document.getElementById('searchResults').innerHTML = html;
-        })
-        .catch(() => {
-          document.getElementById('searchResults').innerHTML = '<p class="no-results">Search error.</p>';
         });
     }
 
-    // Client search in Add Case modal
-    let clientTimeout;
-    document.getElementById('clientSearch').addEventListener('input', () => {
-      clearTimeout(clientTimeout);
-      const q = document.getElementById('clientSearch').value.trim();
-      if (q.length < 2) {
-        document.getElementById('clientResults').innerHTML = '';
-        return;
-      }
+    // CLIENT SEARCH IN ADD CASE
+    function searchClients() {
+      const q = document.getElementById('clientSearchInput').value.trim();
+      const field = document.getElementById('clientSearchField').value;
+      const mode = document.getElementById('clientSearchMode').value;
+      if (!q) { document.getElementById('clientResults').innerHTML = ''; return; }
 
-      clientTimeout = setTimeout(() => {
-        fetch(`/search?q=${encodeURIComponent(q)}&field=client_name&mode=contains`)
-          .then(r => r.json())
-          .then(results => {
-            let html = '';
-            results.forEach(r => {
-              html += `<div class="client-result" onclick="selectClient(${r.client_code}, '${r.client}')">
-                [${r.client_code}] ${r.client}
-              </div>`;
-            });
-            document.getElementById('clientResults').innerHTML = html || '<div class="client-result">No clients found</div>';
+      fetch(`/search?q=${encodeURIComponent(q)}&field=${field}&mode=${mode}`)
+        .then(r => r.json())
+        .then(results => {
+          let html = '';
+          results.slice(0, 10).forEach(r => {
+            html += `<div class="client-result" onclick="selectClient(${r.client_code}, '${r.client}')">
+              [${r.client_code}] ${r.client}
+            </div>`;
           });
-      }, 300);
-    });
+          if (!html) html = '<div class="client-result">No clients found</div>';
+          document.getElementById('clientResults').innerHTML = html;
+        });
+    }
 
     function selectClient(id, name) {
       document.getElementById('selectedClientId').value = id;
-      document.getElementById('selectedClientName').innerText = `Selected: ${name} (ID: ${id})`;
+      document.getElementById('selectedClient').innerHTML = `<strong>Selected: [${id}] ${name}</strong>`;
       document.getElementById('clientResults').innerHTML = '';
-      document.getElementById('clientSearch').value = '';
+      document.getElementById('clientSearchInput').value = '';
     }
   </script>
 </body>
