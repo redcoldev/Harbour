@@ -84,6 +84,14 @@
     .client-results { max-height: 150px; overflow-y: auto; border: 1px solid #ddd; background: white; }
     .client-result { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
     .client-result:hover { background: #f0f0f0; }
+
+    /* ----- SMALLER TEXT IN TABLES & ADD BARS (NEW) ----- */
+    .section table { font-size: 12px; }
+    .section th, .section td { padding: 3px 6px; }
+    .note-date, .note-type, .note-user { font-size: 11px; }
+    .trans-date, .trans-type, .trans-amount, .trans-user { font-size: 11px; }
+    .add-bar { font-size: 12px; }
+    .add-bar input, .add-bar select, .add-bar textarea { height: 34px; padding: 0 8px; }
   </style>
 </head>
 <body>
@@ -123,115 +131,79 @@
           <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a> | 
           <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
         </p>
-        <hr>
         <p><strong>Status:</strong> {{ selected_case.status }}</p>
-        {% if selected_case.substatus %}
-        <p><strong>Substatus:</strong> {{ selected_case.substatus }}</p>
-        {% endif %}
         <p><strong>Open Date:</strong> {{ selected_case.open_date }}</p>
-
-        <!-- TEXT + DROPDOWN -->
-        <p style="margin-top:15px; font-weight:bold;">Select another case for this client:</p>
-        <select onchange="location = '?case_id=' + this.value;" style="width:100%; padding:8px;">
-          <option value="">-- Select another case --</option>
-          {% for cc in client_cases %}
-            <option value="{{ cc.id }}" {% if selected_case.id == cc.id %}selected{% endif %}>
-              {{ cc.debtor_business_name or cc.debtor_first + ' ' + cc.debtor_last }}
-            </option>
+        <p><strong>Select another case for this client:</strong></p>
+        <select onchange="location='?case_id='+this.value">
+          {% for c in client_cases %}
+            <option value="{{ c.id }}" {% if c.id == selected_case.id %}selected{% endif %}>{{ c.debtor_business_name or c.debtor_first + ' ' + c.debtor_last }}</option>
           {% endfor %}
         </select>
       </div>
       {% endif %}
 
-      <!-- NO CASE: SEARCH -->
-      {% if not selected_case %}
+      <!-- SEARCH -->
       <div class="section">
-        <h3>Search Cases</h3>
         <div class="search-form">
           <select id="searchField">
-            <option value="debtor_name">Debtor Name</option>
+            <option value="client_name">Client</option>
+            <option value="debtor_name">Debtor</option>
             <option value="postcode">Postcode</option>
             <option value="email">Email</option>
             <option value="phone">Phone</option>
-            <option value="client_name">Client Name</option>
-            <option value="client_code">Client Code</option>
           </select>
           <select id="searchMode">
-            <option value="contains">contains</option>
-            <option value="is">is</option>
+            <option value="contains">Contains</option>
+            <option value="exact">Exact</option>
           </select>
-          <input type="text" id="searchInput" placeholder="Enter search term">
+          <input id="searchInput" placeholder="Search..." onkeydown="if(event.key==='Enter') doSearch()">
           <button class="btn" onclick="doSearch()">Search</button>
         </div>
         <div id="searchResults"></div>
       </div>
 
-      <div class="section">
-        <p style="color:#777; font-style:italic;">Use the form above to search.</p>
-      </div>
-      {% endif %}
-
-      <!-- NOTES (BOTTOM LEFT) -->
-      {% if selected_case %}
-      <div class="section">
-        <h3>Notes</h3>
-        <div style="flex:1; overflow-y:auto;">
-          <table>
-            <tr><th class="note-date">Date</th><th class="note-type">Type</th><th class="note-text">Note</th><th class="note-user">User</th></tr>
-            {% for note in notes %}
-              <tr>
-                <td class="note-date">{{ note.created_at[:16] }}</td>
-                <td class="note-type">{{ note.type }}</td>
-                <td class="note-text">{{ note.note }}</td>
-                <td class="note-user">{{ note.username }}</td>
-              </tr>
-            {% else %}
-              <tr><td colspan="4">No notes</td></tr>
-            {% endfor %}
-          </table>
-        </div>
-
-        <!-- ADD NOTE BAR (PINNED BOTTOM) -->
-        <div class="add-bar-container">
-          <form action="/add_note" method="post" class="add-bar">
-            <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-            <select name="type">
-              <option>General</option>
-              <option>Dispute</option>
-              <option>Inbound Call</option>
-              <option>Outbound Call</option>
-            </select>
-            <textarea name="note" placeholder="Enter note..." required></textarea>
-            <button type="submit">Add</button>
-          </form>
-        </div>
-      </div>
-      {% endif %}
-
     </div>
 
-    <!-- RIGHT -->
     <div class="right">
-      <h3>Transactions</h3>
 
-      {% if selected_case %}
-      <!-- ADD TRANSACTION BAR (PINNED BOTTOM) -->
-      <div class="add-bar-container">
-        <form action="/add_transaction" method="post" class="add-bar" style="margin-bottom:0;">
-          <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-          <select name="type">
-            <option>Invoice</option>
-            <option>Payment</option>
-            <option>Charge</option>
-            <option>Interest</option>
-          </select>
-          <input name="amount" type="number" step="0.01" placeholder="Amount" required>
-          <input name="note" placeholder="Note">
-          <button type="submit">Add</button>
+      <!-- NOTES -->
+      <div class="section">
+        <h4>Notes</h4>
+        <table>
+          <tr><th class="note-date">Date</th><th class="note-type">Type</th><th class="note-text">Note</th><th class="note-user">User</th></tr>
+          {% for n in notes %}
+            <tr>
+              <td class="note-date">{{ n.created_at[:10] }} {{ n.created_at[11:16] }}</td>
+              <td class="note-type">{{ n.type }}</td>
+              <td class="note-text">{{ n.note }}</td>
+              <td class="note-user">{{ n.username }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">No notes</td></tr>
+          {% endfor %}
+        </table>
+
+        <div class="add-bar-container">
+          <div class="add-bar">
+            <select name="note_type" form="addNoteForm">
+              <option>General</option>
+              <option>Inbound Call</option>
+              <option>Outbound Call</option>
+              <option>Email Sent</option>
+              <option>Email Received</option>
+            </select>
+            <textarea name="note" placeholder="Enter note..." form="addNoteForm"></textarea>
+            <button form="addNoteForm">Add</button>
+          </div>
+        </div>
+        <form id="addNoteForm" method="post" action="/add_note" style="display:none;">
+          <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
         </form>
       </div>
 
-      <div style="flex:1; overflow-y:auto;">
+      <!-- TRANSACTIONS -->
+      <div class="section">
+        <h4>Transactions</h4>
         <table>
           <tr><th class="trans-date">Date</th><th class="trans-type">Type</th><th class="trans-amount">Amount</th><th class="trans-note">Note</th><th class="trans-user">User</th></tr>
           {% for t in transactions %}
@@ -246,6 +218,23 @@
             <tr><td colspan="5">No transactions</td></tr>
           {% endfor %}
         </table>
+
+        <div class="add-bar-container">
+          <div class="add-bar">
+            <select name="type" form="addMoneyForm">
+              <option>Invoice</option>
+              <option>Payment</option>
+              <option>Charge</option>
+              <option>Interest</option>
+            </select>
+            <input type="number" step="0.01" name="amount" placeholder="Amount" form="addMoneyForm">
+            <textarea name="note" placeholder="Note (optional)" form="addMoneyForm"></textarea>
+            <button form="addMoneyForm">Add</button>
+          </div>
+        </div>
+        <form id="addMoneyForm" method="post" action="/add_money" style="display:none;">
+          <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+        </form>
       </div>
 
       <div class="totals">
