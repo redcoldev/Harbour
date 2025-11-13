@@ -8,6 +8,8 @@ import random
 import pandas as pd
 from io import BytesIO
 from weasyprint import HTML
+import jwt
+import uuid
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -43,7 +45,6 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    # RUN ONCE AT STARTUP
     db = sqlite3.connect(DB)
     c = db.cursor()
 
@@ -129,6 +130,41 @@ def init_db():
         created_at TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
         FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+    ''')
+
+    # API TABLES
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS api_keys (
+        id INTEGER PRIMARY KEY,
+        client_id INTEGER NOT NULL,
+        key TEXT UNIQUE NOT NULL,
+        name TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+    )
+    ''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS debtor_tokens (
+        id INTEGER PRIMARY KEY,
+        case_id INTEGER NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY (case_id) REFERENCES cases(id)
+    )
+    ''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS outbound_logs (
+        id INTEGER PRIMARY KEY,
+        client_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        to TEXT NOT NULL,
+        message TEXT,
+        status TEXT DEFAULT 'queued',
+        created_at TEXT DEFAULT (datetime('now'))
     )
     ''')
 
@@ -369,6 +405,35 @@ def client_search():
         'id': r['id'],
         'name': r['business_name']
     } for r in results])
+
+# === API ENDPOINTS ===
+@app.route('/api/generate_key', methods=['POST'])
+@login_required
+def generate_api_key():
+    db = get_db()
+    c = db.cursor()
+    key = str(uuid.uuid4())
+    c.execute("INSERT INTO api_keys (client_id, key, name) VALUES (?, ?, ?)",
+              (current_user.id, key, "New Key"))
+    db.commit()
+    return jsonify({"key": key})
+
+@app.route('/api/keys')
+@login_required
+def list_api_keys():
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, name FROM api_keys WHERE client_id = ? AND active = 1", (current_user.id,))
+    return jsonify([{"id": r['id'], "name": r['name']} for r in c.fetchall()])
+
+@app.route('/api/revoke_key/<int:key_id>', methods=['POST'])
+@login_required
+def revoke_key(key_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE api_keys SET active = 0 WHERE id = ? AND client_id = ?", (key_id, current_user.id))
+    db.commit()
+    return jsonify({"status": "revoked"})
 
 # === REPORTS ===
 @app.route('/report')
