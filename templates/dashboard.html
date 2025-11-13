@@ -129,7 +129,7 @@
 
         <!-- TEXT + DROPDOWN -->
         <p style="margin-top:15px; font-weight:bold;">Select another case for this client:</p>
-        <select onchange="location = '?case_id=' + this.value;" style="width:100%;.padding:8px;">
+        <select onchange="location = '?case_id=' + this.value;" style="width:100%; padding:8px;">
           <option value="">-- Select another case --</option>
           {% for cc in client_cases %}
             <option value="{{ cc.id }}" {% if selected_case.id == cc.id %}selected{% endif %}>
@@ -312,6 +312,16 @@
     </div>
   </div>
 
+  <!-- API KEYS MODAL -->
+  <div id="apiModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('apiModal')">×</span>
+      <h3>API Keys</h3>
+      <button class="btn" onclick="generateKey()">+ New Key</button>
+      <div id="apiKeys" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
   <script>
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -373,7 +383,43 @@
       document.getElementById('clientResults').innerHTML = '';
       document.getElementById('clientSearchInput').value = '';
     }
+
+    // API KEYS
+    function generateKey() {
+      fetch('/api/generate_key', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+          alert('API Key: ' + data.key + '\nSave it now — you won’t see it again!');
+          loadApiKeys();
+        });
+    }
+    function loadApiKeys() {
+      fetch('/api/keys')
+        .then(r => r.json())
+        .then(keys => {
+          let html = '<table style="width:100%; margin-top:10px;"><tr><th>Name</th><th>Key</th><th>Actions</th></tr>';
+          keys.forEach(k => {
+            html += `<tr><td>${k.name}</td><td>••••••••</td><td><button class="btn" onclick="revokeKey(${k.id})">Revoke</button></td></tr>`;
+          });
+          html += '</table>';
+          document.getElementById('apiKeys').innerHTML = html;
+        });
+    }
+    function revokeKey(id) {
+      if (confirm("Revoke this key?")) {
+        fetch(`/api/revoke_key/${id}`, {method: 'POST'})
+          .then(() => loadApiKeys());
+      }
+    }
+
+    // Load API keys on open
+    document.getElementById('apiModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal('apiModal');
+    });
+    document.querySelector('#apiModal .close').addEventListener('click', () => closeModal('apiModal'));
+    document.getElementById('apiModal').addEventListener('transitionend', function() {
+      if (this.classList.contains('active')) loadApiKeys();
+    });
   </script>
 </body>
 </html>
-
