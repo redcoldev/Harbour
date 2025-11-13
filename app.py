@@ -5,10 +5,9 @@ import bcrypt
 import os
 from datetime import date, datetime, timedelta
 import random
+import pandas as pd
 from io import BytesIO
 from weasyprint import HTML
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -139,72 +138,6 @@ def init_db():
             hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt())
             c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('admin', hashed, 'admin'))
 
-        # DUMMY DATA
-        c.execute("SELECT COUNT(*) FROM clients")
-        if c.fetchone()[0] == 0:
-            clients = [
-                ("Limited", "Acme Corp", "John", "Doe", "01234 567890", "john@acme.com", "8.5"),
-                ("Sole Trader", "Bob's Plumbing", "Bob", "Smith", "07700 900123", "bob@plumb.co.uk", "7.0"),
-                ("Partnership", "Green & Co", "Sarah", "Green", "020 7946 0001", "sarah@green.co", "6.5"),
-                ("Individual", "Freelance Designs", "Alex", "Taylor", "07890 123456", "alex@design.com", "9.0"),
-                ("Limited", "Tech Solutions Ltd", "Mike", "Brown", "0113 496 0002", "mike@techsol.co.uk", "8.0")
-            ]
-            client_ids = []
-            for cl in clients:
-                c.execute('''
-                    INSERT INTO clients (business_type, business_name, contact_first, contact_last, phone, email, default_interest_rate)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', cl)
-                client_ids.append(c.lastrowid)
-
-            debtor_types = ["Individual", "Sole Trader", "Limited", "Partnership"]
-            statuses = ["Open", "On Hold", "Closed"]
-            for client_id in client_ids:
-                for i in range(5):
-                    debtor_type = random.choice(debtor_types)
-                    first = random.choice(["Emma", "James", "Olivia", "Liam", "Noah", "Ava"])
-                    last = random.choice(["Wilson", "Davis", "Martinez", "Lee", "Clark", "Walker"])
-                    business = f"{first} {last} Ltd" if debtor_type in ["Limited", "Partnership"] else None
-                    c.execute('''
-                        INSERT INTO cases 
-                        (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last, phone, email, postcode, status, substatus, interest_rate)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        client_id, debtor_type, business, first, last,
-                        f"07{random.randint(100,999)} {random.randint(100000,999999)}",
-                        f"{first.lower()}.{last.lower()}@example.com",
-                        f"SW1A {random.randint(1,9)}AA",
-                        random.choice(statuses),
-                        random.choice(["Awaiting Docs", "In Court", "Payment Plan", None]),
-                        float(clients[client_ids.index(client_id)][6])
-                    ))
-                    case_id = c.lastrowid
-
-                    for _ in range(random.randint(3,7)):
-                        typ = random.choice(["Invoice", "Payment", "Charge", "Interest"])
-                        amount = round(random.uniform(50, 1500), 2)
-                        days_ago = random.randint(1, 180)
-                        tx_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
-                        c.execute('''
-                            INSERT INTO money (case_id, type, amount, created_by, transaction_date, note)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ''', (case_id, typ, amount, 1, tx_date, f"{typ} entry" if random.random() > 0.5 else None))
-
-                    for _ in range(random.randint(2,5)):
-                        note_type = random.choice(["General", "Inbound Call", "Outbound Call", "Dispute"])
-                        note_text = random.choice([
-                            "Customer called to discuss balance",
-                            "Sent reminder letter",
-                            "Payment plan agreed",
-                            "Dispute raised – awaiting proof",
-                            "Left voicemail"
-                        ])
-                        note_date = (datetime.now() - timedelta(days=random.randint(1, 120))).strftime('%Y-%m-%d %H:%M:%S')
-                        c.execute('''
-                            INSERT INTO notes (case_id, type, created_by, note, created_at)
-                            VALUES (?, ?, ?, ?, ?)
-                        ''', (case_id, note_type, 1, note_text, note_date))
-
         db.commit()
         db.close()
         app.db_initialized = True
@@ -250,7 +183,7 @@ def add_case():
     ''', (
         client_id, data['debtor_business_type'], data.get('debtor_business_name'),
         data.get('debtor_first'), data.get('debtor_last'), data.get('phone'), data.get('email'),
-        data.get('street'), data.get('street2'), data.get('city ⊆'), data.get('postcode'), data.get('country'),
+        data.get('street'), data.get('street2'), data.get('city'), data.get('postcode'), data.get('country'),
         data.get('status', 'Open'), data.get('substatus'), data.get('custom1'), data.get('custom2'), data.get('custom3'), interest_rate
     ))
     db.commit()
@@ -321,7 +254,7 @@ def search():
     """
     c.execute(sql, (param,))
     results = c.fetchall()
-    db.close
+    db.close()
 
     return jsonify([{
         'case_id': r['case_id'],
@@ -331,6 +264,45 @@ def search():
         'postcode': r['postcode'] or '',
         'email': r['email'] or '',
         'phone': r['phone'] or ''
+    } for r in results])
+
+# === CLIENT SEARCH (NO DUPES) ===
+@app.route('/client_search')
+@login_required
+def client_search():
+    query = request.args.get('q', '').strip()
+    field = request.args.get('field', 'business_name').strip()
+    mode = request.args.get('mode', 'contains')
+
+    if not query:
+        return jsonify([])
+
+    db = get_db()
+    c = db.cursor()
+
+    field_map = {
+        'client_name': "business_name",
+        'client_code': "id"
+    }
+    col = field_map.get(field, "business_name")
+
+    operator = '=' if mode == 'is' else 'LIKE'
+    param = query if mode == 'is' else f'%{query}%'
+
+    sql = f"""
+        SELECT DISTINCT id, business_name
+        FROM clients
+        WHERE {col} {operator} ?
+        ORDER BY business_name
+        LIMIT 10
+    """
+    c.execute(sql, (param,))
+    results = c.fetchall()
+    db.close()
+
+    return jsonify([{
+        'id': r['id'],
+        'name': r['business_name']
     } for r in results])
 
 # === REPORTS ===
@@ -382,11 +354,11 @@ def report():
         <tr>
             <td>{case_id}</td>
             <td>{data['debtor']}</td>
-            <td>£{data['Invoice']:,.2f}</td>
-            <td>£{data['Payment']:,.2f}</td>
-            <td>£{data['Charge']:,.2f}</td>
-            <td>£{data['Interest']:,.2f}</td>
-            <td>£{balance:,.2f}</td>
+            <td>£{data['Invoice']:.2f}</td>
+            <td>£{data['Payment']:.2f}</td>
+            <td>£{data['Charge']:.2f}</td>
+            <td>£{data['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
         </tr>
         """
         for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
@@ -396,11 +368,11 @@ def report():
     html += f"""
         <tr style="font-weight:bold; background:#eef;">
             <td colspan="2">TOTALS</td>
-            <td>£{grand['Invoice']:,.2f}</td>
-            <td>£{grand['Payment']:,.2f}</td>
-            <td>£{grand['Charge']:,.2f}</td>
-            <td>£{grand['Interest']:,.2f}</td>
-            <td>£{grand_balance:,.2f}</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
         </tr>
     </table>
     """
@@ -435,47 +407,17 @@ def export_excel():
         if r['type']:
             cases[case_id][r['type']] += r['amount']
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Client Report"
-
-    # Header
-    headers = ['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance']
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal='center')
-
-    # Data + Totals
-    grand = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+    data = []
     for case_id, d in cases.items():
         balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
-        row = [case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance]
-        ws.append(row)
-        for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
-            grand[t] += d[t]
+        data.append([case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance])
 
-    # Grand Total
-    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
-    total_row = ['TOTALS', '', grand['Invoice'], grand['Payment'], grand['Charge'], grand['Interest'], grand_balance]
-    ws.append(total_row)
-    total_row_cells = ws[ws.max_row]
-    for cell in total_row_cells:
-        cell.font = Font(bold=True)
-
-    # Format numbers with commas
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=3, max_col=7):
-        for cell in row:
-            cell.number_format = '#,##0.00'
-
-    # Borders
-    thin = Side(border_style="thin")
-    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
-        for cell in row:
-            cell.border = Border(top=thin, left=thin, right=thin, bottom=thin)
+    df = pd.DataFrame(data, columns=['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance'])
+    df.loc['Total'] = ['', 'TOTALS', df['Invoice'].sum(), df['Payment'].sum(), df['Charge'].sum(), df['Interest'].sum(), df['Balance'].sum()]
 
     output = BytesIO()
-    wb.save(output)
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
     output.seek(0)
     return send_file(output, download_name=f"report_client_{client_code}.xlsx", as_attachment=True)
 
@@ -521,11 +463,11 @@ def export_pdf():
         <tr>
             <td>{case_id}</td>
             <td>{d['debtor']}</td>
-            <td>£{d['Invoice']:,.2f}</td>
-            <td>£{d['Payment']:,.2f}</td>
-            <td>£{d['Charge']:,.2f}</td>
-            <td>£{d['Interest']:,.2f}</td>
-            <td>£{balance:,.2f}</td>
+            <td>£{d['Invoice']:.2f}</td>
+            <td>£{d['Payment']:.2f}</td>
+            <td>£{d['Charge']:.2f}</td>
+            <td>£{d['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
         </tr>
         """
     grand = {t: sum(c[t] for c in cases.values()) for t in ['Invoice','Payment','Charge','Interest']}
@@ -533,11 +475,11 @@ def export_pdf():
     html += f"""
         <tr style="font-weight:bold; background:#eee;">
             <td colspan="2">TOTALS</td>
-            <td>£{grand['Invoice']:,.2f}</td>
-            <td>£{grand['Payment']:,.2f}</td>
-            <td>£{grand['Charge']:,.2f}</td>
-            <td>£{grand['Interest']:,.2f}</td>
-            <td>£{grand_balance:,.2f}</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
         </tr>
     </table>
     """
@@ -602,9 +544,6 @@ def dashboard():
                 else:
                     balance += amt
 
-    # Format balance with commas
-    balance_str = f"£{balance:,.2f}"
-
     return render_template('dashboard.html',
                            clients=clients,
                            all_cases=all_cases,
@@ -613,7 +552,7 @@ def dashboard():
                            client_cases=client_cases,
                            notes=notes,
                            transactions=transactions,
-                           balance=balance_str,
+                           balance=balance,
                            totals=totals)
 
 @app.route('/login', methods=['GET', 'POST'])
