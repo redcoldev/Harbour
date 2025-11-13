@@ -43,7 +43,7 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    # FORCE DUMMY DATA ON EVERY START
+    # RUN ONCE AT STARTUP
     db = sqlite3.connect(DB)
     c = db.cursor()
 
@@ -138,10 +138,10 @@ def init_db():
         hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt())
         c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('admin', hashed, 'admin'))
 
-    # DUMMY DATA — FORCE EVERY TIME
+    # DUMMY DATA
     c.execute("SELECT COUNT(*) FROM clients")
     if c.fetchone()[0] == 0:
-        print("INSERTING DUMMY DATA...")  # DEBUG LOG
+        print("INSERTING DUMMY DATA...")
         clients = [
             ("Limited", "Acme Corp", "John", "Doe", "01234 567890", "john@acme.com", "8.5"),
             ("Sole Trader", "Bob's Plumbing", "Bob", "Smith", "07700 900123", "bob@plumb.co.uk", "7.0"),
@@ -208,15 +208,8 @@ def init_db():
     db.commit()
     db.close()
 
-# CALL ON EVERY START
-init_db()  # <— THIS LINE IS KEY
-
-@app.before_request
-def before_request():
-    pass  # No need to call init_db here
-
-# === REST OF YOUR CODE (forms, search, reports, dashboard, login) ===
-# [PASTE ALL FROM PREVIOUS FULL app.py BELOW THIS LINE]
+# RUN ONCE AT STARTUP
+init_db()
 
 # === FORMS ===
 @app.route('/add_client', methods=['POST'])
@@ -238,8 +231,409 @@ def add_client():
     db.commit()
     return redirect(url_for('dashboard'))
 
-# ... [all other routes: add_case, add_transaction, add_note, search, client_search, report, export_excel, export_pdf, dashboard, login] ...
-# (use the full code from your last working version)
+@app.route('/add_case', methods=['POST'])
+@login_required
+def add_case():
+    data = request.form
+    db = get_db()
+    c = db.cursor()
+    client_id = int(data['client_id'])
+    c.execute("SELECT default_interest_rate FROM clients WHERE id = ?", (client_id,))
+    client = c.fetchone()
+    interest_rate = client['default_interest_rate'] if client else 0.0
+    c.execute('''
+        INSERT INTO cases 
+        (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last, phone, email, street, street2, city, postcode, country, status, substatus, custom1, custom2, custom3, interest_rate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        client_id, data['debtor_business_type'], data.get('debtor_business_name'),
+        data.get('debtor_first'), data.get('debtor_last'), data.get('phone'), data.get('email'),
+        data.get('street'), data.get('street2'), data.get('city'), data.get('postcode'), data.get('country'),
+        data.get('status', 'Open'), data.get('substatus'), data.get('custom1'), data.get('custom2'), data.get('custom3'), interest_rate
+    ))
+    db.commit()
+    return redirect(url_for('dashboard'))
+
+@app.route('/add_transaction', methods=['POST'])
+@login_required
+def add_transaction():
+    data = request.form
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        INSERT INTO money (case_id, type, amount, created_by, note)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (data['case_id'], data['type'], float(data['amount']), current_user.id, data.get('note')))
+    db.commit()
+    return redirect(url_for('dashboard', case_id=data['case_id']))
+
+@app.route('/add_note', methods=['POST'])
+@login_required
+def add_note():
+    data = request.form
+    db = get_db()
+    c = db.cursor()
+    c.execute('''
+        INSERT INTO notes (case_id, type, created_by, note)
+        VALUES (?, ?, ?, ?)
+    ''', (data['case_id'], data['type'], current_user.id, data['note']))
+    db.commit()
+    return redirect(url_for('dashboard', case_id=data['case_id']))
+
+# === SEARCH ===
+@app.route('/search')
+@login_required
+def search():
+    query = request.args.get('q', '').strip()
+    field = request.args.get('field', 'debtor_first').strip()
+    mode = request.args.get('mode', 'contains')
+
+    if not query:
+        return jsonify([])
+
+    db = get_db()
+    c = db.cursor()
+
+    field_map = {
+        'debtor_name': "(s.debtor_first || ' ' || s.debtor_last)",
+        'postcode': "s.postcode",
+        'email': "s.email",
+        'phone': "s.phone",
+        'client_name': "c.business_name",
+        'client_code': "c.id"
+    }
+    col = field_map.get(field, "s.debtor_first")
+
+    operator = '=' if mode == 'is' else 'LIKE'
+    param = query if mode == 'is' else f'%{query}%'
+
+    sql = f"""
+        SELECT s.id as case_id, c.business_name, c.id as client_code,
+               s.debtor_first, s.debtor_last, s.debtor_business_name,
+               s.postcode, s.email, s.phone
+        FROM cases s
+        JOIN clients c ON s.client_id = c.id
+        WHERE {col} {operator} ?
+        ORDER BY c.business_name, s.id
+        LIMIT 50
+    """
+    c.execute(sql, (param,))
+    results = c.fetchall()
+    db.close()
+
+    return jsonify([{
+        'case_id': r['case_id'],
+        'client': r['business_name'],
+        'client_code': r['client_code'],
+        'debtor': r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}",
+        'postcode': r['postcode'] or '',
+        'email': r['email'] or '',
+        'phone': r['phone'] or ''
+    } for r in results])
+
+# === CLIENT SEARCH (NO DUPES) ===
+@app.route('/client_search')
+@login_required
+def client_search():
+    query = request.args.get('q', '').strip()
+    field = request.args.get('field', 'business_name').strip()
+    mode = request.args.get('mode', 'contains')
+
+    if not query:
+        return jsonify([])
+
+    db = get_db()
+    c = db.cursor()
+
+    field_map = {
+        'client_name': "business_name",
+        'client_code': "id"
+    }
+    col = field_map.get(field, "business_name")
+
+    operator = '=' if mode == 'is' else 'LIKE'
+    param = query if mode == 'is' else f'%{query}%'
+
+    sql = f"""
+        SELECT DISTINCT id, business_name
+        FROM clients
+        WHERE {col} {operator} ?
+        ORDER BY business_name
+        LIMIT 10
+    """
+    c.execute(sql, (param,))
+    results = c.fetchall()
+    db.close()
+
+    return jsonify([{
+        'id': r['id'],
+        'name': r['business_name']
+    } for r in results])
+
+# === REPORTS ===
+@app.route('/report')
+@login_required
+def report():
+    client_code = request.args.get('client_code', '').strip()
+    db = get_db()
+    c = db.cursor()
+
+    if not client_code:
+        return render_template('report.html', report_html='', client_code='')
+
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return render_template('report.html', report_html='<p>Client not found.</p>', client_code=client_code)
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+        ORDER BY s.id, m.transaction_date
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    html = f"""
+    <h2>Client Report: {client['business_name']} (ID: {client['id']})</h2>
+    <table border="1" style="width:100%; border-collapse:collapse; font-family:Arial; font-size:14px;">
+        <tr style="background:#f5f5f5;">
+            <th>Case ID</th><th>Debtor</th><th>Invoice</th><th>Payment</th><th>Charge</th><th>Interest</th><th>Balance</th>
+        </tr>
+    """
+    grand = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+    for case_id, data in cases.items():
+        balance = data['Invoice'] + data['Charge'] + data['Interest'] - data['Payment']
+        html += f"""
+        <tr>
+            <td>{case_id}</td>
+            <td>{data['debtor']}</td>
+            <td>£{data['Invoice']:.2f}</td>
+            <td>£{data['Payment']:.2f}</td>
+            <td>£{data['Charge']:.2f}</td>
+            <td>£{data['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
+        </tr>
+        """
+        for t in ['Invoice', 'Payment', 'Charge', 'Interest']:
+            grand[t] += data[t]
+
+    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
+    html += f"""
+        <tr style="font-weight:bold; background:#eef;">
+            <td colspan="2">TOTALS</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
+        </tr>
+    </table>
+    """
+    return render_template('report.html', report_html=html, client_code=client_code)
+
+@app.route('/export_excel')
+@login_required
+def export_excel():
+    client_code = request.args.get('client_code')
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return "Client not found", 404
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    data = []
+    for case_id, d in cases.items():
+        balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
+        data.append([case_id, d['debtor'], d['Invoice'], d['Payment'], d['Charge'], d['Interest'], balance])
+
+    df = pd.DataFrame(data, columns=['Case ID', 'Debtor', 'Invoice', 'Payment', 'Charge', 'Interest', 'Balance'])
+    df.loc['Total'] = ['', 'TOTALS', df['Invoice'].sum(), df['Payment'].sum(), df['Charge'].sum(), df['Interest'].sum(), df['Balance'].sum()]
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name=f"report_client_{client_code}.xlsx", as_attachment=True)
+
+@app.route('/export_pdf')
+@login_required
+def export_pdf():
+    client_code = request.args.get('client_code')
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    client = c.fetchone()
+    if not client:
+        return "Client not found", 404
+
+    c.execute("""
+        SELECT s.id as case_id, s.debtor_business_name, s.debtor_first, s.debtor_last,
+               m.type, m.amount
+        FROM cases s
+        LEFT JOIN money m ON s.id = m.case_id
+        WHERE s.client_id = ?
+    """, (client_code,))
+    rows = c.fetchall()
+
+    cases = {}
+    for r in rows:
+        case_id = r['case_id']
+        if case_id not in cases:
+            debtor = r['debtor_business_name'] or f"{r['debtor_first']} {r['debtor_last']}"
+            cases[case_id] = {'debtor': debtor, 'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+        if r['type']:
+            cases[case_id][r['type']] += r['amount']
+
+    html = f"""
+    <h1>Client Report: {client['business_name']} (ID: {client['id']})</h1>
+    <table border="1" style="width:100%; border-collapse:collapse; font-family:Arial; font-size:12px;">
+        <tr style="background:#ddd;">
+            <th>Case ID</th><th>Debtor</th><th>Invoice</th><th>Payment</th><th>Charge</th><th>Interest</th><th>Balance</th>
+        </tr>
+    """
+    for case_id, d in cases.items():
+        balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
+        html += f"""
+        <tr>
+            <td>{case_id}</td>
+            <td>{d['debtor']}</td>
+            <td>£{d['Invoice']:.2f}</td>
+            <td>£{d['Payment']:.2f}</td>
+            <td>£{d['Charge']:.2f}</td>
+            <td>£{d['Interest']:.2f}</td>
+            <td>£{balance:.2f}</td>
+        </tr>
+        """
+    grand = {t: sum(c[t] for c in cases.values()) for t in ['Invoice','Payment','Charge','Interest']}
+    grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
+    html += f"""
+        <tr style="font-weight:bold; background:#eee;">
+            <td colspan="2">TOTALS</td>
+            <td>£{grand['Invoice']:.2f}</td>
+            <td>£{grand['Payment']:.2f}</td>
+            <td>£{grand['Charge']:.2f}</td>
+            <td>£{grand['Interest']:.2f}</td>
+            <td>£{grand_balance:.2f}</td>
+        </tr>
+    </table>
+    """
+
+    pdf = HTML(string=html).write_pdf()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=report_client_{client_code}.pdf'
+    return response
+
+# === DASHBOARD ===
+@app.route('/')
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    db = get_db()
+    c = db.cursor()
+
+    c.execute("SELECT id, business_name FROM clients ORDER BY business_name")
+    clients = c.fetchall()
+
+    c.execute("""
+        SELECT c.id as client_id, c.business_name, s.id as case_id, 
+               s.debtor_business_name, s.debtor_first, s.debtor_last
+        FROM clients c
+        LEFT JOIN cases s ON c.id = s.client_id
+        ORDER BY c.business_name, s.id
+    """)
+    all_cases = c.fetchall()
+
+    selected_case = None
+    case_client = None
+    client_cases = []
+    notes = []
+    transactions = []
+    balance = 0.0
+    totals = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
+
+    case_id = request.args.get('case_id')
+    if case_id:
+        c.execute("SELECT * FROM cases WHERE id = ?", (case_id,))
+        selected_case = c.fetchone()
+        if selected_case:
+            c.execute("SELECT * FROM clients WHERE id = ?", (selected_case['client_id'],))
+            case_client = c.fetchone()
+
+            c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = ? ORDER BY id", (selected_case['client_id'],))
+            client_cases = c.fetchall()
+
+            c.execute('SELECT n.*, u.username FROM notes n JOIN users u ON n.created_by = u.id WHERE n.case_id = ? ORDER BY n.created_at DESC', (case_id,))
+            notes = c.fetchall()
+
+            c.execute('SELECT m.*, u.username FROM money m JOIN users u ON m.created_by = u.id WHERE m.case_id = ? ORDER BY m.transaction_date DESC, m.id DESC', (case_id,))
+            transactions = c.fetchall()
+
+            for t in transactions:
+                amt = t['amount']
+                typ = t['type']
+                totals[typ] += amt
+                if typ == 'Payment':
+                    balance -= amt
+                else:
+                    balance += amt
+
+    return render_template('dashboard.html',
+                           clients=clients,
+                           all_cases=all_cases,
+                           selected_case=selected_case,
+                           case_client=case_client,
+                           client_cases=client_cases,
+                           notes=notes,
+                           transactions=transactions,
+                           balance=balance,
+                           totals=totals)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password'].encode('utf-8')
+        db = get_db()
+        c = db.cursor()
+        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        if user and bcrypt.checkpw(password, user['password_hash']):
+            login_user(User(user['id'], user['username'], user['role']))
+            return redirect(url_for('dashboard'))
+        flash('Invalid credentials')
+    return render_template('login.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
