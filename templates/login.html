@@ -24,21 +24,25 @@
     </div>
 
     <!-- LOGIN FORM -->
-    <div class="login-box">
-      <h2>Login</h2>
-      <form method="post">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-      </form>
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          <div class="flash">{{ messages[0] }}</div>
-        {% endif %}
-      {% endwith %}
-      <p class="hint">© Redwood Collections Ltd 2025</p>
-    </div>
+
+    
+<div class="login-box">
+  <h2 style="font-size:1.4em; margin:0 0 16px; color:#333;"> Log in to CRM</h2>
+  <form method="post">
+    <input type="text" name="username" placeholder="Username" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+  </form>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash">{{ messages[0] }}</div>
+    {% endif %}
+  {% endwith %}
+</div>
+
+    
   </div>
 </body>
 </html>
+
 
