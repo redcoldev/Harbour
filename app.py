@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, send_file, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import sqlite3
-import bcrypt
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import bcrypt
 from datetime import date, datetime, timedelta
 import random
 import pandas as pd
@@ -12,29 +13,13 @@ import uuid
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-DB = 'crm.db'
 
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
-class User(UserMixin):
-    def __init__(self, id, username, role):
-        self.id = id
-        self.username = username
-        self.role = role
-
-@login_manager.user_loader
-def load_user(user_id):
-    db = get_db()
-    c = db.cursor()
-    c.execute("SELECT id, username, role FROM users WHERE id = ?", (user_id,))
-    row = c.fetchone()
-    return User(row[0], row[1], row[2]) if row else None
+# === POSTGRESQL (Render) ===
+DATABASE_URL = os.environ['DATABASE_URL']
 
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(DB, check_same_thread=False)
-        g.db.row_factory = sqlite3.Row
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return g.db
 
 @app.teardown_appcontext
@@ -52,156 +37,132 @@ def format_date(date_str):
     except:
         return date_str
 
-# === INIT_DB FUNCTION ===
+# === INIT_DB (PostgreSQL) ===
 def init_db():
-    db = sqlite3.connect(DB)
-    c = db.cursor()
+    conn = psycopg2.connect(DATABASE_URL)
+    c = conn.cursor()
 
-    # === TABLES ===
     c.execute('''
     CREATE TABLE IF NOT EXISTS clients (
-        id INTEGER PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         business_type TEXT NOT NULL,
         business_name TEXT NOT NULL,
         contact_first TEXT,
         contact_last TEXT,
         phone TEXT,
         email TEXT,
-        street TEXT,
-        street2 TEXT,
-        city TEXT,
-        postcode TEXT,
-        country TEXT,
         bacs_details TEXT,
-        custom1 TEXT,
-        custom2 TEXT,
-        custom3 TEXT,
         default_interest_rate REAL DEFAULT 0.0
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS cases (
-        id INTEGER PRIMARY KEY,
-        client_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
         debtor_business_type TEXT,
         debtor_business_name TEXT,
         debtor_first TEXT,
         debtor_last TEXT,
         phone TEXT,
         email TEXT,
-        street TEXT,
-        street2 TEXT,
-        city TEXT,
-        postcode TEXT,
-        country TEXT,
         status TEXT DEFAULT 'Open',
         substatus TEXT,
         next_action_date TEXT,
-        open_date TEXT DEFAULT (date('now')),
-        custom1 TEXT,
-        custom2 TEXT,
-        custom3 TEXT,
-        interest_rate REAL,
-        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        open_date DATE DEFAULT CURRENT_DATE
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
-        password_hash BLOB NOT NULL,
+        password_hash BYTEA NOT NULL,
         role TEXT DEFAULT 'user'
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS money (
-        id INTEGER PRIMARY KEY,
-        case_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        case_id INTEGER NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
         type TEXT NOT NULL,
         amount REAL NOT NULL,
-        transaction_date TEXT DEFAULT (date('now')),
-        created_by INTEGER NOT NULL,
+        transaction_date DATE DEFAULT CURRENT_DATE,
+        created_by INTEGER NOT NULL REFERENCES users(id),
         note TEXT,
         recoverable INTEGER DEFAULT 0,
-        billable INTEGER DEFAULT 0,
-        FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        billable INTEGER DEFAULT 0
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS notes (
-        id INTEGER PRIMARY KEY,
-        case_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        case_id INTEGER NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
         type TEXT NOT NULL,
-        created_by INTEGER NOT NULL,
+        created_by INTEGER NOT NULL REFERENCES users(id),
         note TEXT NOT NULL,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS api_keys (
-        id INTEGER PRIMARY KEY,
-        client_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL REFERENCES clients(id),
         key TEXT UNIQUE NOT NULL,
         name TEXT,
         active INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (client_id) REFERENCES clients(id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS debtor_tokens (
-        id INTEGER PRIMARY KEY,
-        case_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        case_id INTEGER NOT NULL REFERENCES cases(id),
         token TEXT UNIQUE NOT NULL,
-        expires_at TEXT NOT NULL,
-        FOREIGN KEY (case_id) REFERENCES cases(id)
+        expires_at TEXT NOT NULL
     )
     ''')
 
     c.execute('''
     CREATE TABLE IF NOT EXISTS outbound_logs (
-        id INTEGER PRIMARY KEY,
-        client_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL REFERENCES clients(id),
         type TEXT NOT NULL,
         recipient TEXT NOT NULL,
         message TEXT,
         status TEXT DEFAULT 'queued',
-        created_at TEXT DEFAULT (datetime('now'))
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-    # === FORCE ADMIN USER ===
-    c.execute("SELECT COUNT(*) FROM users WHERE username = ?", ('helmadmin',))
+    # === ADMIN USER ===
+    c.execute("SELECT COUNT(*) FROM users WHERE username = 'helmadmin'")
     if c.fetchone()[0] == 0:
-        print("Creating admin user: helmadmin")
+        print("Creating admin: helmadmin")
         hashed = bcrypt.hashpw(b'helmadmin', bcrypt.gensalt())
-        c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('helmadmin', hashed, 'admin'))
+        c.execute("INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
+                  ('helmadmin', hashed, 'admin'))
 
     # === DUMMY DATA ===
     c.execute("SELECT COUNT(*) FROM clients")
     if c.fetchone()[0] == 0:
         print("INSERTING DUMMY DATA...")
         clients = [
-            ("Limited", "Acme Corp", "John", "Doe", "01234 567890", "john@acme.com", "8.5"),
-            ("Sole Trader", "Bob's Plumbing", "Bob", "Smith", "07700 900123", "bob@plumb.co.uk", "7.0"),
-            ("Partnership", "Green & Co", "Sarah", "Green", "020 7946 0001", "sarah@green.co", "6.5"),
-            ("Individual", "Freelance Designs", "Alex", "Taylor", "07890 123456", "alex@design.com", "9.0"),
-            ("Limited", "Tech Solutions Ltd", "Mike", "Brown", "0113 496 0002", "mike@techsol.co.uk", "8.0")
+            ("Limited", "Acme Corp", "John", "Doe", "01234 567890", "john@acme.com", 8.5),
+            ("Sole Trader", "Bob's Plumbing", "Bob", "Smith", "07700 900123", "bob@plumb.co.uk", 7.0),
+            ("Partnership", "Green & Co", "Sarah", "Green", "020 7946 0001", "sarah@green.co", 6.5),
+            ("Individual", "Freelance Designs", "Alex", "Taylor", "07890 123456", "alex@design.com", 9.0),
+            ("Limited", "Tech Solutions Ltd", "Mike", "Brown", "0113 496 0002", "mike@techsol.co.uk", 8.0)
         ]
         client_ids = []
         for cl in clients:
             c.execute('''
                 INSERT INTO clients (business_type, business_name, contact_first, contact_last, phone, email, default_interest_rate)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', cl)
             client_ids.append(c.lastrowid)
 
@@ -222,7 +183,7 @@ def init_db():
                     INSERT INTO cases
                     (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last,
                      phone, email, status, substatus, next_action_date)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''', (client_id, debtor_type, business, first, last,
                       f"07{random.randint(100,999)} {random.randint(100000,999999)}",
                       f"{first.lower()}.{last.lower()}@example.com",
@@ -236,7 +197,7 @@ def init_db():
                     for n in range(30):
                         note_type = random.choice(["General", "Inbound Call", "Outbound Call"])
                         note_text = f"Auto-generated note {n+1}/30 for testing scroll."
-                        c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (?,?,?,1)",
+                        c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (%s, %s, %s, 1)",
                                   (case_id, note_type, note_text))
 
                     for t in range(30):
@@ -246,29 +207,45 @@ def init_db():
                         note = f"Test trans {t+1}" if t % 5 == 0 else ""
                         c.execute('''
                             INSERT INTO money (case_id, type, amount, created_by, note, transaction_date)
-                            VALUES (?,?,?,?,?,?)
-                        ''', (case_id, typ, amt, 1, note, trans_date))
+                            VALUES (%s, %s, %s, 1, %s, %s)
+                        ''', (case_id, typ, amt, note, trans_date))
                 else:
                     for _ in range(random.randint(1, 4)):
                         typ = random.choice(["Invoice", "Payment", "Charge", "Interest"])
                         amt = round(random.uniform(100, 5000), 2)
-                        c.execute("INSERT INTO money (case_id, type, amount, created_by) VALUES (?,?,?,1)",
+                        c.execute("INSERT INTO money (case_id, type, amount, created_by) VALUES (%s, %s, %s, 1)",
                                   (case_id, typ, amt))
                     for _ in range(random.randint(0, 3)):
                         note_type = random.choice(["General", "Inbound Call", "Outbound Call"])
-                        c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (?,?,?,1)",
+                        c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (%s, %s, %s, 1)",
                                   (case_id, note_type, f"Sample {note_type.lower()} note"))
 
                 case_counter += 1
 
-    db.commit()
-    db.close()
+    conn.commit()
+    conn.close()
 
 # === CALL init_db ON STARTUP ===
 init_db()
 
-# === ROUTES ===
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
+class User(UserMixin):
+    def __init__(self, id, username, role):
+        self.id = id
+        self.username = username
+        self.role = role
+
+@login_manager.user_loader
+def load_user(user_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, username, role FROM users WHERE id = %s", (user_id,))
+    row = c.fetchone()
+    return User(row['id'], row['username'], row['role']) if row else None
+
+# === ROUTES (same as before, just %s instead of ?) ===
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -276,7 +253,7 @@ def login():
         password = request.form['password']
         db = get_db()
         c = db.cursor()
-        c.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?", (username,))
+        c.execute("SELECT id, username, password_hash, role FROM users WHERE username = %s", (username,))
         user = c.fetchone()
         if user and bcrypt.checkpw(password.encode(), user['password_hash']):
             login_user(User(user['id'], user['username'], user['role']))
@@ -297,7 +274,7 @@ def add_client():
     c = db.cursor()
     c.execute('''
         INSERT INTO clients (business_type, business_name, contact_first, contact_last, phone, email, bacs_details, default_interest_rate)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         request.form['business_type'],
         request.form['business_name'],
@@ -319,7 +296,7 @@ def add_case():
     c = db.cursor()
     c.execute('''
         INSERT INTO cases (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last, phone, email, next_action_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         request.form['client_id'],
         request.form['debtor_business_type'],
@@ -346,7 +323,7 @@ def add_transaction():
     c.execute('''
         INSERT INTO money (case_id, type, amount, created_by, note,
                            transaction_date, recoverable, billable)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         request.form['case_id'],
         request.form['type'],
@@ -367,7 +344,7 @@ def add_note():
     c = db.cursor()
     c.execute('''
         INSERT INTO notes (case_id, type, note, created_by)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
     ''', (
         request.form['case_id'],
         request.form['type'],
@@ -394,7 +371,7 @@ def search():
                s.postcode, s.email, s.phone, c.id as client_code
         FROM cases s
         JOIN clients c ON s.client_id = c.id
-        WHERE {'s.debtor_business_name' if field == 'debtor_name' else 'c.business_name' if field == 'client_name' else 's.' + field} LIKE ?
+        WHERE {'s.debtor_business_name' if field == 'debtor_name' else 'c.business_name' if field == 'client_name' else 's.' + field} LIKE %s
         ORDER BY c.business_name, s.id
         LIMIT 50
     '''
@@ -414,10 +391,10 @@ def client_search():
     c = db.cursor()
     like = f"%{q}%" if mode == 'contains' else q
     if field == 'client_code':
-        sql = "SELECT id, business_name as name FROM clients WHERE id = ?"
+        sql = "SELECT id, business_name as name FROM clients WHERE id = %s"
         c.execute(sql, (q if mode == 'is' else like,))
     else:
-        sql = "SELECT id, business_name as name FROM clients WHERE business_name LIKE ? ORDER BY business_name LIMIT 20"
+        sql = "SELECT id, business_name as name FROM clients WHERE business_name LIKE %s ORDER BY business_name LIMIT 20"
         c.execute(sql, (like,))
     results = [{'id': r['id'], 'name': r['name']} for r in c.fetchall()]
     return jsonify(results)
@@ -430,7 +407,7 @@ def report():
     if client_code:
         db = get_db()
         c = db.cursor()
-        c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+        c.execute("SELECT id, business_name FROM clients WHERE id = %s", (client_code,))
         client = c.fetchone()
         if client:
             c.execute("""
@@ -438,7 +415,7 @@ def report():
                        m.type, m.amount
                 FROM cases s
                 LEFT JOIN money m ON s.id = m.case_id
-                WHERE s.client_id = ?
+                WHERE s.client_id = %s
             """, (client_code,))
             rows = c.fetchall()
             cases = {}
@@ -465,7 +442,7 @@ def export_excel():
     client_code = request.args.get('client_code')
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    c.execute("SELECT id, business_name FROM clients WHERE id = %s", (client_code,))
     client = c.fetchone()
     if not client:
         return "Client not found", 404
@@ -475,7 +452,7 @@ def export_excel():
                m.type, m.amount
         FROM cases s
         LEFT JOIN money m ON s.id = m.case_id
-        WHERE s.client_id = ?
+        WHERE s.client_id = %s
     """, (client_code,))
     rows = c.fetchall()
 
@@ -508,7 +485,7 @@ def export_pdf():
     client_code = request.args.get('client_code')
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT id, business_name FROM clients WHERE id = ?", (client_code,))
+    c.execute("SELECT id, business_name FROM clients WHERE id = %s", (client_code,))
     client = c.fetchone()
     if not client:
         return "Client not found", 404
@@ -518,7 +495,7 @@ def export_pdf():
                m.type, m.amount
         FROM cases s
         LEFT JOIN money m ON s.id = m.case_id
-        WHERE s.client_id = ?
+        WHERE s.client_id = %s
     """, (client_code,))
     rows = c.fetchall()
 
@@ -579,7 +556,7 @@ def generate_key():
     c = db.cursor()
     key = str(uuid.uuid4())
     name = request.json.get('name', 'API Key')
-    c.execute("INSERT INTO api_keys (client_id, key, name) VALUES (?, ?, ?)", (1, key, name))
+    c.execute("INSERT INTO api_keys (client_id, key, name) VALUES (1, %s, %s)", (key, name))
     db.commit()
     return jsonify({'key': key})
 
@@ -596,7 +573,7 @@ def list_keys():
 def revoke_key(key_id):
     db = get_db()
     c = db.cursor()
-    c.execute("UPDATE api_keys SET active = 0 WHERE id = ?", (key_id,))
+    c.execute("UPDATE api_keys SET active = 0 WHERE id = %s", (key_id,))
     db.commit()
     return '', 204
 
@@ -606,7 +583,7 @@ def revoke_key(key_id):
 def edit_note():
     db = get_db()
     c = db.cursor()
-    c.execute("UPDATE notes SET type = ?, note = ? WHERE id = ?", 
+    c.execute("UPDATE notes SET type = %s, note = %s WHERE id = %s", 
               (request.form['type'], request.form['note'], request.form['note_id']))
     db.commit()
     return redirect(url_for('dashboard', case_id=request.form.get('case_id') or ''))
@@ -616,7 +593,7 @@ def edit_note():
 def delete_note(note_id):
     db = get_db()
     c = db.cursor()
-    c.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    c.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     db.commit()
     return '', 204
 
@@ -625,7 +602,7 @@ def delete_note(note_id):
 def get_transaction(trans_id):
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT * FROM money WHERE id = ?", (trans_id,))
+    c.execute("SELECT * FROM money WHERE id = %s", (trans_id,))
     t = c.fetchone()
     return jsonify(dict(t))
 
@@ -637,8 +614,8 @@ def edit_transaction():
     recoverable = 1 if request.form.get('recoverable') else 0
     billable = 1 if request.form.get('billable') else 0
     c.execute('''
-        UPDATE money SET amount = ?, note = ?, recoverable = ?, billable = ?
-        WHERE id = ?
+        UPDATE money SET amount = %s, note = %s, recoverable = %s, billable = %s
+        WHERE id = %s
     ''', (request.form['amount'], request.form.get('note', ''), recoverable, billable, request.form['trans_id']))
     db.commit()
     return redirect(url_for('dashboard', case_id=request.form.get('case_id') or ''))
@@ -648,7 +625,7 @@ def edit_transaction():
 def delete_transaction(trans_id):
     db = get_db()
     c = db.cursor()
-    c.execute("DELETE FROM money WHERE id = ?", (trans_id,))
+    c.execute("DELETE FROM money WHERE id = %s", (trans_id,))
     db.commit()
     return '', 204
 
@@ -682,19 +659,19 @@ def dashboard():
 
     case_id = request.args.get('case_id')
     if case_id:
-        c.execute("SELECT * FROM cases WHERE id = ?", (case_id,))
+        c.execute("SELECT * FROM cases WHERE id = %s", (case_id,))
         selected_case = c.fetchone()
         if selected_case:
-            c.execute("SELECT * FROM clients WHERE id = ?", (selected_case['client_id'],))
+            c.execute("SELECT * FROM clients WHERE id = %s", (selected_case['client_id'],))
             case_client = c.fetchone()
 
-            c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = ? ORDER BY id", (selected_case['client_id'],))
+            c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = %s ORDER BY id", (selected_case['client_id'],))
             client_cases = c.fetchall()
 
-            c.execute('SELECT n.*, u.username FROM notes n JOIN users u ON n.created_by = u.id WHERE n.case_id = ? ORDER BY n.created_at DESC', (case_id,))
+            c.execute('SELECT n.*, u.username FROM notes n JOIN users u ON n.created_by = u.id WHERE n.case_id = %s ORDER BY n.created_at DESC', (case_id,))
             notes = c.fetchall()
 
-            c.execute('SELECT m.*, u.username FROM money m JOIN users u ON m.created_by = u.id WHERE m.case_id = ? ORDER BY m.transaction_date DESC, m.id DESC', (case_id,))
+            c.execute('SELECT m.*, u.username FROM money m JOIN users u ON m.created_by = u.id WHERE m.case_id = %s ORDER BY m.transaction_date DESC, m.id DESC', (case_id,))
             transactions = c.fetchall()
 
             for t in transactions:
