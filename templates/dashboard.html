@@ -236,30 +236,30 @@
       <div class="section">
         <h3>Transactions</h3>
         <div class="add-bar-container">
-          <form class="add-bar" action="/add_transaction" method="post">
-            <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+  <form class="add-bar" action="/add_transaction" method="post">
+    <input type="hidden" name="case_id" value="{{ selected_case.id }}">
 
-            <select name="type" id="transType" required>
-              <option>Invoice</option>
-              <option>Payment</option>
-              <option>Charge</option>
-              <option>Interest</option>
-            </select>
+    <select name="type" id="transType" required>
+      <option>Invoice</option>
+      <option>Payment</option>
+      <option>Charge</option>
+      <option>Interest</option>
+    </select>
 
-            <input type="number" name="amount" step="0.01" placeholder="Amount" required>
+    <input type="number" name="amount" step="0.01" placeholder="Amount" required>
 
-            <input type="date" name="transaction_date" value="{{ 'now'|strftime('%Y-%m-%d') }}" required>
+    <input type="date" name="transaction_date" value="{{ today_str }}" required>
 
-            <input name="note" placeholder="Note (optional)">
+    <input name="note" placeholder="Note (optional)">
 
-            <div id="chargeOpts" style="display:none; grid-column:1/-1; gap:10px; margin-top:5px;">
-              <label><input type="checkbox" name="recoverable"> Recoverable</label>
-              <label><input type="checkbox" name="billable"> Billable</label>
-            </div>
+    <div id="chargeOpts" style="display:none; grid-column:1/-1; gap:10px; margin-top:5px;">
+      <label><input type="checkbox" name="recoverable"> Recoverable</label>
+      <label><input type="checkbox" name="billable"> Billable</label>
+    </div>
 
-            <button type="submit">Add</button>
-          </form>
-        </div>
+    <button type="submit">Add</button>
+  </form>
+</div>
 
         <script>
           const typeSel = document.getElementById('transType');
@@ -470,3 +470,4 @@
   </script>
 </body>
 </html>
+
