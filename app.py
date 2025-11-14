@@ -14,9 +14,6 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 DB = 'crm.db'
 
-# === CALL init_db ON STARTUP (MUST BE FIRST) ===
-init_db()  # ← MOVED HERE
-
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -55,6 +52,7 @@ def format_date(date_str):
     except:
         return date_str
 
+# === INIT_DB FUNCTION (MUST BE BEFORE CALL) ===
 def init_db():
     db = sqlite3.connect(DB)
     c = db.cursor()
@@ -181,25 +179,12 @@ def init_db():
     )
     ''')
 
-    # === ADD NEW COLUMNS (safe on every start) ===
-    try:
-        c.execute("ALTER TABLE money ADD COLUMN recoverable INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass
-    try:
-        c.execute("ALTER TABLE money ADD COLUMN billable INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass
-
     # === FORCE ADMIN USER: helmadmin / helmadmin ===
     c.execute("SELECT COUNT(*) FROM users WHERE username = ?", ('helmadmin',))
     if c.fetchone()[0] == 0:
         print("Creating admin user: helmadmin")
         hashed = bcrypt.hashpw(b'helmadmin', bcrypt.gensalt())
         c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('helmadmin', hashed, 'admin'))
-
-    db.commit()
-    db.close()
 
     # === DUMMY DATA ===
     c.execute("SELECT COUNT(*) FROM clients")
@@ -223,7 +208,7 @@ def init_db():
         debtor_types = ["Individual", "Sole Trader", "Limited", "Partnership"]
         statuses = ["Open", "On Hold", "Closed"]
 
-        case_counter = 1  # Track case ID
+        case_counter = 1
 
         for client_id in client_ids:
             for i in range(5):
@@ -246,17 +231,15 @@ def init_db():
                       next_action))
                 case_id = c.lastrowid
 
-                # === SPECIAL: CASE ID 1 GETS 30 NOTES + 30 TRANSACTIONS ===
+                # === CASE ID 1: 30 NOTES + 30 TRANSACTIONS ===
                 if case_counter == 1:
                     print(f"Adding 30 notes + 30 transactions to Case ID 1")
-                    # 30 Notes
                     for n in range(30):
                         note_type = random.choice(["General", "Inbound Call", "Outbound Call"])
-                        note_text = f"Auto-generated note {n+1}/30 for testing scroll behavior."
+                        note_text = f"Auto-generated note {n+1}/30 for testing scroll."
                         c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (?,?,?,1)",
                                   (case_id, note_type, note_text))
 
-                    # 30 Transactions
                     for t in range(30):
                         typ = random.choice(["Invoice", "Payment", "Charge", "Interest"])
                         amt = round(random.uniform(50, 5000), 2)
@@ -267,7 +250,6 @@ def init_db():
                             VALUES (?,?,?,?,?,?)
                         ''', (case_id, typ, amt, 1, note, trans_date))
                 else:
-                    # === NORMAL RANDOM DATA FOR OTHER CASES ===
                     for _ in range(random.randint(1, 4)):
                         typ = random.choice(["Invoice", "Payment", "Charge", "Interest"])
                         amt = round(random.uniform(100, 5000), 2)
@@ -278,13 +260,15 @@ def init_db():
                         c.execute("INSERT INTO notes (case_id, type, note, created_by) VALUES (?,?,?,1)",
                                   (case_id, note_type, f"Sample {note_type.lower()} note"))
 
-                case_counter += 1  # Increment for next case
+                case_counter += 1
+
+    db.commit()
+    db.close()
 
 # === CALL init_db ON STARTUP ===
 init_db()
 
 # === ROUTES ===
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -683,11 +667,8 @@ def dashboard():
                            transactions=transactions,
                            balance=balance,
                            totals=totals,
-                           today_str=today_str,        # ← NEW
+                           today_str=today_str,
                            format_date=format_date)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
