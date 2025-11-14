@@ -184,7 +184,7 @@
       <div class="section">
         <h3>Notes</h3>
         <div class="add-bar-container">
-          <form class="add-bar" action="/add_note" method="post">
+          <form class="add-bar" action="/add_note" method="post" style="grid-template-columns: 120px 1fr auto;">
             <input type="hidden" name="case_id" value="{{ selected_case.id }}">
             <select name="type" required>
               <option>General</option>
@@ -194,11 +194,12 @@
               <option>Email Received</option>
               <option>Letter Sent</option>
             </select>
-            <textarea name="note" placeholder="Enter note..." required></textarea>
-            <button type="submit">Add</button>
+            <textarea name="note" placeholder="Enter note..." required style="height:40px; resize:none;"></textarea>
+            <button type="submit" style="width:60px;">Add</button>
           </form>
         </div>
 
+        
         {% if notes %}
         <table>
           <thead>
@@ -470,4 +471,5 @@
   </script>
 </body>
 </html>
+
 
