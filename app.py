@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, send_file, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
+from psycopg.rows import dict_row
 import bcrypt
 from datetime import date, datetime, timedelta
 import random
@@ -17,10 +17,9 @@ app.secret_key = 'supersecretkey'
 # === POSTGRESQL (Render) ===
 DATABASE_URL = os.environ['DATABASE_URL']
 
-def get_db():
-    if 'db' not in g:
-        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    return g.db
+def init_db():
+    conn = psycopg.connect(DATABASE_URL)
+    c = conn.cursor()
 
 @app.teardown_appcontext
 def close_db(e=None):
@@ -700,3 +699,4 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
