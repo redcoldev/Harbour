@@ -14,6 +14,9 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 DB = 'crm.db'
 
+# === CALL init_db ON STARTUP (MUST BE FIRST) ===
+init_db()  # ← MOVED HERE
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -685,5 +688,6 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
