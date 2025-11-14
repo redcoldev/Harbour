@@ -188,11 +188,15 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # === ADMIN USER: helmadmin / helmadmin ===
-    c.execute("SELECT COUNT(*) FROM users")
+    # === FORCE ADMIN USER: helmadmin / helmadmin ===
+    c.execute("SELECT COUNT(*) FROM users WHERE username = ?", ('helmadmin',))
     if c.fetchone()[0] == 0:
+        print("Creating admin user: helmadmin")
         hashed = bcrypt.hashpw(b'helmadmin', bcrypt.gensalt())
         c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", ('helmadmin', hashed, 'admin'))
+
+    db.commit()
+    db.close()
 
     # === DUMMY DATA ===
     c.execute("SELECT COUNT(*) FROM clients")
@@ -681,4 +685,5 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
