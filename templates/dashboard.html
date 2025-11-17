@@ -179,7 +179,7 @@
                 <td class="note-text">{{ n.note }}</td>
                 <td>{{ n.username }}</td>
                 <td class="note-actions">
-          <button class="btn-small" onclick="editNote({{ n.id }}, '{{ n.type }}', '{{ n.note|escapejs }}')">Edit</button>
+          <button class="btn-small" onclick="editNote({{ n.id }}, '{{ n.type }}', {{ n.note|tojson|safe }})">Edit</button>
                   <button class="btn-small delete" onclick="deleteNote({{ n.id }})">Del</button>
                 </td>
               </tr>
@@ -555,6 +555,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
