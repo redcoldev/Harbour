@@ -37,7 +37,7 @@ def format_date(date_str):
     except:
         return date_str
 
-# === INIT_DB (psycopg3) ===
+# === INIT_DB (no dummy data) ===
 def init_db():
     conn = psycopg.connect(DATABASE_URL)
     c = conn.cursor()
@@ -150,7 +150,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# === CALL init_db ON STARTUP ===
 init_db()
 
 login_manager = LoginManager(app)
@@ -170,7 +169,6 @@ def load_user(user_id):
     row = c.fetchone()
     return User(row['id'], row['username'], row['role']) if row else None
 
-# === ROUTES ===
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
