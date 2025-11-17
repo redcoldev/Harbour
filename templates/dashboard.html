@@ -525,8 +525,37 @@
       if (this.classList.contains('active')) loadApiKeys();
     });
   </script>
+
+<script>
+// Global error handler – turns any JS crash into a red popup instead of breaking everything
+window.addEventListener('error', function(e) {
+  if (e.filename && e.filename.includes('dashboard.html')) {
+    const msg = e.error ? e.error.message : e.message;
+    const line = e.lineno ? `Line ${e.lineno}` : '';
+    const box = document.createElement('div');
+    box.style.position = 'fixed';
+    box.style.top = '20px';
+    box.style.right = '20px';
+    box.style.background = '#ffebee';
+    box.style.color = '#c62828';
+    box.style.border = '2px solid #c62828';
+    box.style.padding = '15px';
+    box.style.borderRadius = '8px';
+    box.style.zIndex = '9999';
+    box.style.maxWidth = '400px';
+    box.style.fontFamily = 'Arial';
+    box.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+    box.innerHTML = `<strong>JavaScript Error</strong><br>${msg}<br>${line}<br><small>Page still works – keep going</small>`;
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 8000);
+  }
+});
+</script>
+
+  
 </body>
 </html>
+
 
 
 
