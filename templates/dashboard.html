@@ -6,6 +6,21 @@
   <link rel="icon" href="/static/favicon.png" type="image/png">
   <style>
 
+/* FLAT TEXT LINKS INSTEAD OF BUTTONS – super compact */
+.flat-action {
+    color: rgb(227,82,5) !important;
+    font-size: 11px !important;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0 4px;
+}
+.flat-action:hover {
+    text-decoration: underline !important;
+}
+.flat-del { color: #c0392b !important; }
+
+
+    
 /* ULTRA-COMPACT ROWS – add this to your <style> */
 .notes-scroll table,
 .transactions-scroll table {
@@ -256,11 +271,12 @@
                 <td>{{ n.username }}</td>
 
                 
-<td class="note-actions">
-  <div class="actions-horizontal">
-    <button class="btn-small" onclick="editNote({{ n.id }}, '{{ n.type }}', {{ n.note|tojson|safe }})">Edit</button>
-    <button class="btn-small delete" onclick="deleteNote({{ n.id }})">Del</button>
-  </div>
+<td class="note-actions" style="text-align:center; white-space:nowrap;">
+  <a href="javascript:editNote({{ n.id }}, '{{ n.type }}', {{ n.note|tojson|safe }})" 
+     class="flat-action">edit</a>
+  <span style="color:#ccc;">|</span>
+  <a href="javascript:deleteNote({{ n.id }})" 
+     class="flat-action flat-del">del</a>
 </td>
 
                 
@@ -335,11 +351,12 @@
                 <td>{{ t.username }}</td>
                 <td class="trans-rb">{% if t.recoverable %}✓{% endif %}</td>
                 <td class="trans-rb">{% if t.billable %}✓{% endif %}</td>
-<td class="trans-actions">
-  <div class="actions-horizontal">
-    <button class="btn-small" onclick="editTransaction({{ t.id }})">Edit</button>
-    <button class="btn-small delete" onclick="deleteTransaction({{ t.id }})">Del</button>
-  </div>
+<td class="trans-actions" style="text-align:center; white-space:nowrap;">
+  <a href="javascript:editTransaction({{ t.id }})" 
+     class="flat-action">edit</a>
+  <span style="color:#ccc;">|</span>
+  <a href="javascript:deleteTransaction({{ t.id }})" 
+     class="flat-action flat-del">del</a>
 </td>
               </tr>
               {% endfor %}
@@ -663,6 +680,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
