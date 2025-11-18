@@ -658,7 +658,7 @@ def dashboard():
 
             c.execute('''
                 SELECT m.*, u.username FROM money m JOIN users u ON m.created_by = u.id 
-                WHERE m.case_id = %s ORDER BY m.transaction_date DESC, m.id DESC LIMIT %s OFFSET %s
+                WHERE m.case_id = %s ORDER BY m.transaction_date ASC, m.id ASC LIMIT %s OFFSET %s
             ''', (case_id, per_page, offset))
             transactions = c.fetchall()
 
@@ -698,6 +698,7 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
