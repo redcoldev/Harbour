@@ -537,7 +537,8 @@ th { background:#f5f5f5; }
               <tr class="{% if t.type == 'Charge' and not t.recoverable %}grey-charge{% endif %}">
                 <td>{{ format_date(t.transaction_date) }}</td>
                 <td>{{ t.type }}</td>
-                <td>£{{ t.amount|round(2) }}</td>
+              <td>{{ t.amount|money }}</td>
+
                 <td class="trans-note">{{ t.note or '' }}</td>
                 <td>{{ t.username }}</td>
                 <td class="trans-rb">{% if t.recoverable %}✓{% endif %}</td>
@@ -871,6 +872,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
