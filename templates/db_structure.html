@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Structure</title>
+    <style>
+        body { font-family: Arial; background:#f6f6f6; padding:20px; }
+        .table-box {
+            background:white;
+            padding:15px;
+            margin-bottom:20px;
+            border-radius:6px;
+            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 { margin-top:0; }
+        table { width:100%; border-collapse:collapse; margin-top:10px; }
+        th, td {
+            padding:6px 10px;
+            border-bottom:1px solid #eee;
+            text-align:left;
+            font-size:14px;
+        }
+        th { background:#fafafa; }
+        a { color:#e35205; text-decoration:none; }
+        a:hover { text-decoration:underline; }
+    </style>
+</head>
+<body>
+
+<h1>Database Structure</h1>
+<p>Showing all tables and fields in the live PostgreSQL database.</p>
+
+{% for table, columns in structure.items() %}
+<div class="table-box">
+    <h2 id="{{ table }}">{{ table }}</h2>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Default</th>
+        </tr>
+        {% for col in columns %}
+        <tr>
+            <td>{{ col.column_name }}</td>
+            <td>{{ col.data_type }}</td>
+            <td>{{ col.is_nullable }}</td>
+            <td>{{ col.column_default }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endfor %}
+
+</body>
+</html>
