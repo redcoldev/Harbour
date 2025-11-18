@@ -54,7 +54,8 @@ def money(value):
 
 @app.context_processor
 def utility_processor():
-    return dict(format_date=format_date)
+    return dict(format_date=format_date, money=money)
+
 
 def init_db():
     conn = psycopg.connect(DATABASE_URL)
@@ -695,5 +696,6 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
