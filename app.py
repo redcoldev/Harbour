@@ -42,6 +42,16 @@ def format_date(date_obj):
             return date_obj
     return date_obj.strftime('%d/%m/%Y')
 
+def money(value):
+    """Format as £ with thousand separators and 2 decimal places."""
+    if value is None or value == '':
+        return "£0.00"
+    try:
+        return f"£{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
 @app.context_processor
 def utility_processor():
     return dict(format_date=format_date)
