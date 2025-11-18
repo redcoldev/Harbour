@@ -160,7 +160,7 @@ def add_transaction():
     billable = 1 if request.form.get('billable') else 0
 
     c.execute('''
-        INSERT INTO money (case_id, type, amount, created_by, note, transaction_date, recoverable, billable)
+        INSERT INTO money (case_id, type, amount, created_by, description, transaction_date, recoverable, billable)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         request.form['case_id'],
@@ -630,6 +630,7 @@ def db_structure():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
