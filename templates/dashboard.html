@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <link rel="icon" href="/static/favicon.png" type="image/png">
 
-
-
-
-
-  
   <style>
 /* FLAT TEXT LINKS */
 .flat-action {
@@ -312,29 +307,10 @@ th { background:#f5f5f5; }
 .modal.active {
     pointer-events: auto;
 }
-
-
-
-    
-
-    
   </style>
-
-
-
-
-
-
-
-
-
-
-
-  
 </head>
 <body>
 
-  <!-- HEADER -->
   <div class="header">
     <img src="/static/helm-logo.png" alt="Helm">
     <div class="btn-group">
@@ -351,11 +327,9 @@ th { background:#f5f5f5; }
   <div class="container">
     <div class="left">
 
-<!-- CLIENT / DEBTOR INFO – 2×2 GRID WITH LEFT-ALIGNED CLIENT + FAINT GRID LINES -->
 {% if selected_case and case_client %}
 <div class="info-box" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; font-size:14px; line-height:1.45; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
 
-  <!-- TOP LEFT: DEBTOR -->
   <div style="padding:16px; background:#f9fbff; border-right:1px solid #eaeaea; border-bottom:1px solid #eaeaea;">
     <div style="font-weight:bold; margin-bottom:4px; color:#222;">Debtor</div>
     <div style="font-size:15px; font-weight:600; margin-bottom:2px;">
@@ -368,7 +342,6 @@ th { background:#f5f5f5; }
     <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
   </div>
 
-  <!-- TOP RIGHT: CLIENT (now left-aligned) -->
   <div style="padding:16px; background:#f9fbff; border-bottom:1px solid #eaeaea;">
     <div style="font-weight:bold; margin-bottom:4px; color:#222;">Client</div>
     <div style="font-size:15px; font-weight:600; margin-bottom:2px;">{{ case_client.business_name }}</div>
@@ -379,7 +352,6 @@ th { background:#f5f5f5; }
     BACS: {{ case_client.bacs_details or '—' }}
   </div>
 
-  <!-- BOTTOM LEFT: STATUS + EDIT -->
   <div style="padding:16px; background:#ffffff; border-right:1px solid #eaeaea;">
     <table style="width:100%; margin-bottom:12px;">
       <tr><td style="width:130px; color:#555; font-weight:bold; padding:3px 0;">Status</td><td style="color:#e74c3c; font-weight:bold;">{{ selected_case.status or '—' }}</td></tr>
@@ -398,7 +370,6 @@ th { background:#f5f5f5; }
     <button class="btn" onclick="openModal('caseEditModal')" style="padding:7px 14px; font-size:13px;">Edit Case Details</button>
   </div>
 
-  <!-- BOTTOM RIGHT: OTHER CASES -->
   <div style="padding:16px; background:#ffffff;">
     <strong>All cases for this client ({{ client_cases|length }})</strong>
     <select
@@ -423,7 +394,6 @@ th { background:#f5f5f5; }
 
 
       
-      <!-- SEARCH BAR -->
       {% if not selected_case %}
       <div class="section">
         <div class="search-form">
@@ -434,7 +404,6 @@ th { background:#f5f5f5; }
       </div>
       {% endif %}
 
-      <!-- NOTES -->
       {% if selected_case %}
       <div class="section" style="display:flex; flex-direction:column; height:100%;">
         <h3>Notes</h3>
@@ -479,7 +448,7 @@ th { background:#f5f5f5; }
   <a 
     href="javascript:void(0)" 
     class="flat-action"
-    onclick="editNote({{ n.id }}, {{ n.type|tojson }}, {{ n.note|tojson }})"
+    onclick="editNote({{ n.id }}, '{{ n.type|e }}', '{{ n.note|e }}')"
   >edit</a>
 
   <span style="color:#ccc;">|</span>
@@ -505,10 +474,8 @@ th { background:#f5f5f5; }
 
     </div>
 
-    <!-- RIGHT PANEL -->
     <div class="right">
 
-      <!-- TRANSACTIONS -->
       {% if selected_case %}
       <div class="section" style="display:flex; flex-direction:column; height:100%;">
         <h3>Transactions</h3>
@@ -581,7 +548,6 @@ th { background:#f5f5f5; }
         </div>
       </div>
 
-      <!-- TOTALS -->
       <div style="padding:15px;">
         <div class="totals">
 <div class="total-box">Invoice<br>{{ totals.Invoice|money }}</div>
@@ -598,11 +564,9 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- ALL ORIGINAL MODALS + NEW CASE EDIT MODAL -->
-  <!-- clientModal -->
   <div id="clientModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('clientModal')">×</span>
+      <span class="close" onclick="closeModal('clientModal')">&times;</span>
       <h3>Add Client</h3>
       <form action="/add_client" method="post">
         <select name="business_type" required><option>Limited</option><option>Partnership</option><option>Sole Trader</option><option>Individual</option></select>
@@ -618,10 +582,9 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- caseModal -->
   <div id="caseModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('caseModal')">×</span>
+      <span class="close" onclick="closeModal('caseModal')">&times;</span>
       <h3>Add Case</h3>
 
       <div class="client-search-form">
@@ -653,20 +616,18 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- apiModal -->
   <div id="apiModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal('apiModal')">×</span>
+      <span class="close" onclick="closeModal('apiModal')">&times;</span>
       <h3>API Keys</h3>
       <button class="btn" onclick="generateKey()">+ New Key</button>
       <div id="apiKeys" style="margin-top:15px;"></div>
     </div>
   </div>
 
-  <!-- noteEditModal -->
   <div id="noteEditModal" class="modal">
     <div class="modal-content" style="width:500px;">
-      <span class="close" onclick="closeModal('noteEditModal')">×</span>
+      <span class="close" onclick="closeModal('noteEditModal')">&times;</span>
       <h3>Edit Note</h3>
       <form id="noteEditForm" action="/edit_note" method="post">
         <input type="hidden" name="note_id" id="editNoteId">
@@ -684,10 +645,9 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- transEditModal -->
   <div id="transEditModal" class="modal">
     <div class="modal-content" style="width:550px;">
-      <span class="close" onclick="closeModal('transEditModal')">×</span>
+      <span class="close" onclick="closeModal('transEditModal')">&times;</span>
       <h3>Edit Transaction</h3>
       <form id="transEditForm" action="/edit_transaction" method="post">
         <input type="hidden" name="trans_id" id="editTransId">
@@ -702,13 +662,11 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- NEW: caseEditModal -->
-<div id="caseEditModal" class="modal">
+  <div id="caseEditModal" class="modal">
   <div class="modal-content">
-    <span class="close" onclick="closeModal('caseEditModal')">×</span>
+    <span class="close" onclick="closeModal('caseEditModal')">&times;</span>
     <h3>Edit Case Details</h3>
 
-    <!-- CURRENT VALUES – READ-ONLY DISPLAY -->
     <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:20px; font-size:14px;">
       <table style="width:100%;">
         <tr>
@@ -726,7 +684,6 @@ th { background:#f5f5f5; }
       </table>
     </div>
 
-    <!-- EDITABLE FIELDS BELOW -->
     <form action="/update_case_status" method="post">
       <input type="hidden" name="case_id" value="{{ selected_case.id }}">
 
@@ -827,6 +784,7 @@ th { background:#f5f5f5; }
       }
     }
 
+    // THIS FUNCTION NOW WORKS CORRECTLY WITH THE NEW HTML ARGUMENTS
     function editNote(id, type, note) {
       document.getElementById('editNoteId').value = id;
       document.getElementById('editNoteType').value = type;
@@ -895,29 +853,3 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
