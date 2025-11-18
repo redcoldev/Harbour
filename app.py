@@ -465,37 +465,28 @@ def delete_note(note_id):
     db.commit()
     return '', 204
 
-@app.route('/get_transaction/<int:trans_id>')
-@login_required
-def get_transaction(trans_id):
-    db = get_db()
-    c = db.cursor()
-    c.execute("SELECT * FROM money WHERE id = %s", (trans_id,))
-    t = c.fetchone()
-    return jsonify(dict(t)) if t else ('', 404)
-
 @app.route('/edit_transaction', methods=['POST'])
 @login_required
 def edit_transaction():
     db = get_db()
     c = db.cursor()
+
     recoverable = 1 if request.form.get('recoverable') else 0
     billable = 1 if request.form.get('billable') else 0
-    
-c.execute('''
-    UPDATE money 
-    SET amount = %s, description = %s, recoverable = %s, billable = %s
-    WHERE id = %s
-''', (
-    request.form['amount'],
-    request.form.get('note', ''),  # still named "note" from the form
-    recoverable,
-    billable,
-    request.form['trans_id']
-))
 
+    c.execute('''
+        UPDATE money 
+        SET amount = %s, description = %s, recoverable = %s, billable = %s
+        WHERE id = %s
+    ''', (
+        request.form['amount'],
+        request.form.get('note', ''),  # form still uses "note"
+        recoverable,
+        billable,
+        request.form['trans_id']
+    ))
 
-    
+     
     db.commit()
     return redirect(url_for('dashboard', case_id=request.form.get('case_id') or ''))
 
@@ -639,6 +630,7 @@ def db_structure():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
