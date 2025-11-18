@@ -56,6 +56,8 @@ def money(value):
 def utility_processor():
     return dict(format_date=format_date, money=money)
 
+app.jinja_env.filters['money'] = money
+
 
 def init_db():
     conn = psycopg.connect(DATABASE_URL)
@@ -696,6 +698,7 @@ def dashboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
