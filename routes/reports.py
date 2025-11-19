@@ -87,7 +87,7 @@ def export_pdf():
     html += "<table border='1' style='width:100%; border-collapse:collapse; font-family:Arial; font-size:12px;'><tr style='background:#ddd;'><th>Case ID</th><th>Debtor</th><th>Invoice</th><th>Payment</th><th>Charge</th><th>Interest</th><th>Balance</th></tr>"
     for case_id, d in cases.items():
         balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
-        html += f"<tr><td>{case_id}</td><td>{d['debtor']}</td><td>\£{d['Invoice']:.2f}</td><td>\£{d['Payment']:.2f}</td><td>\£{d['Charge']:.2f}</td><td>\£{d['Interest']:.2f}</td><td>\£{balance:.2f}</td></tr>"
+        html += "<tr><td>" + str(case_id) + "</td><td>" + str(d['debtor']) + "</td><td>&pound;" + "{:.2f}".format(d['Invoice']) + "</td><td>&pound;" + "{:.2f}".format(d['Payment']) + "</td><td>&pound;" + "{:.2f}".format(d['Charge']) + "</td><td>&pound;" + "{:.2f}".format(d['Interest']) + "</td><td>&pound;" + "{:.2f}".format(balance) + "</td></tr>"
 £{d['Interest']:.2f}</td><td>£{balance:.2f}</td></tr>"
     grand = {t: sum(c[t] for c in cases.values()) for t in ['Invoice','Payment','Charge','Interest']}
     grand_balance = grand['Invoice'] + grand['Charge'] + grand['Interest'] - grand['Payment']
