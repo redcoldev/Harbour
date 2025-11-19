@@ -483,9 +483,12 @@ th { background:#f5f5f5; }
       
       {% if not selected_case %}
       <div class="section">
-<div class="search-form">
-  <input type="text" id="searchInput" placeholder="Search clients, debtors, postcode, email, phone..." onkeypress="if(event.key==='Enter') doSearch()">
-  <button class="btn" onclick="doSearch()">Search</button>
+<div style="margin-bottom:15px;">
+  <h3 style="margin:0 0 8px 0; font-size:1.4em;">Search Cases</h3>
+  <div class="search-form">
+    <input type="text" id="searchInput" placeholder="Search clients, debtors, postcode, email, phone..." onkeypress="if(event.key==='Enter') doSearch()">
+    <button class="btn" onclick="doSearch()">Search</button>
+  </div>
 </div>
         <div id="searchResults"></div>
       </div>
@@ -908,6 +911,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
