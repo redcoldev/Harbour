@@ -19,7 +19,6 @@ def init_db(DATABASE_URL):
         default_interest_rate REAL DEFAULT 0.0
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS cases (
         id SERIAL PRIMARY KEY,
@@ -37,7 +36,6 @@ def init_db(DATABASE_URL):
         open_date DATE DEFAULT CURRENT_DATE
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -46,7 +44,6 @@ def init_db(DATABASE_URL):
         role TEXT DEFAULT 'user'
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS money (
         id SERIAL PRIMARY KEY,
@@ -64,7 +61,6 @@ def init_db(DATABASE_URL):
         charge_id INTEGER REFERENCES charges(id)
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS notes (
         id SERIAL PRIMARY KEY,
@@ -75,7 +71,6 @@ def init_db(DATABASE_URL):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS api_keys (
         id SERIAL PRIMARY KEY,
@@ -86,7 +81,6 @@ def init_db(DATABASE_URL):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS case_status_history (
         id SERIAL PRIMARY KEY,
@@ -99,8 +93,6 @@ def init_db(DATABASE_URL):
         changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-
-    # --- CHARGES ---
     c.execute("""
     CREATE TABLE IF NOT EXISTS charges (
         id SERIAL PRIMARY KEY,
@@ -116,7 +108,6 @@ def init_db(DATABASE_URL):
     """)
 
     # --- SAFE MIGRATIONS / RENAME / ADD FIELDS ---
-
     # rename note -> description only if old column exists
     c.execute("""
         SELECT 1
@@ -125,14 +116,16 @@ def init_db(DATABASE_URL):
     """)
     if c.fetchone():
         c.execute("ALTER TABLE money RENAME COLUMN note TO description")
-
-    # new fields (these are safe to repeat because of IF NOT EXISTS)
+    # existing safe adds
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS vat_amount REAL DEFAULT 0.0")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS billed INTEGER DEFAULT 0")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS billeddate DATE")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS charge_id INTEGER REFERENCES charges(id)")
 
+    # NEW: store old next_action_date when undoing status changes
+    c.execute("ALTER TABLE case_status_history ADD COLUMN IF NOT EXISTS old_next_action_date DATE")
 
     conn.commit()
     conn.close()
+
 
