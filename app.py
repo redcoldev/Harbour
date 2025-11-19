@@ -490,6 +490,41 @@ def edit_transaction():
     db.commit()
     return redirect(url_for('dashboard', case_id=request.form.get('case_id') or ''))
 
+
+@app.route('/edit_transaction', methods=['POST'])
+@login_required
+def edit_transaction():
+    ... existing code ...
+
+    db.commit()
+    return redirect(url_for('dashboard', case_id=request.form.get('case_id') or ''))
+
+# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+# ADD THE NEW ROUTE HERE
+@app.route('/get_transaction/<int:trans_id>')
+@login_required
+def get_transaction(trans_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT id, amount, description, recoverable, billable
+        FROM money 
+        WHERE id = %s
+    """, (trans_id,))
+    trans = c.fetchone()
+    if not trans:
+        return jsonify({}), 404
+    
+    data = dict(trans)
+    data['note'] = data.get('description') or ''  # keeps the current JS working
+    return jsonify(data)
+# ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+
+@app.route('/delete_transaction/<int:trans_id>', methods=['POST'])
+@login_required
+def delete_transaction(trans_id):
+
+
 @app.route('/delete_transaction/<int:trans_id>', methods=['POST'])
 @login_required
 def delete_transaction(trans_id):
@@ -630,6 +665,7 @@ def db_structure():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
