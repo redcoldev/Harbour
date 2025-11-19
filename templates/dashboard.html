@@ -419,37 +419,86 @@ th { background:#f5f5f5; }
     BACS: {{ case_client.bacs_details or '—' }}
   </div>
 
-  <div style="padding:10px; background:#ffffff; border-right:1px solid #eaeaea;">
-    <table style="width:100%; margin-bottom:8px;">
-      <tr><td style="width:130px; color:#555; font-weight:bold; padding:2px 0;">Status</td><td style="color:#e74c3c; font-weight:bold;">{{ selected_case.status or '—' }}</td></tr>
-      <tr><td style="color:#555; font-weight:bold; padding:2px 0;">Sub-status</td><td>{{ selected_case.substatus or '—' }}</td></tr>
-      <tr>
-        <td style="color:#555; font-weight:bold; padding:2px 0;">Next Action</td>
-        <td>
-          {% if selected_case.next_action_date %}
-            <span style="color:#27ae60; font-weight:bold;">{{ selected_case.next_action_date }}</span>
-          {% else %}
-            —
-          {% endif %}
-        </td>
-      </tr>
-    </table>
-    <button class="btn" onclick="openModal('caseEditModal')" style="padding:5px 10px; font-size:12px; height:32px;">Edit Case Details</button>
-  </div>
+<div style="padding:10px; background:#ffffff; border-right:1px solid #eaeaea;">
+  <form action="{{ url_for('case.update_case_status') }}" method="post" style="display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:6px; align-items:center;">
+    <input type="hidden" name="case_id" value="{{ selected_case.id }}">
 
-  <div style="padding:10px; background:#ffffff;">
-    <strong style="font-size:12px;">All cases for this client ({{ client_cases|length }})</strong>
-<select onchange="if(this.value==='viewall') location.href='{{ url_for('client.client_cases', client_id=case_client.id) }}'; else if(this.value) location='?case_id='+this.value;">
-  <option value="">— Switch Case —</option>
-  {% for c in client_cases %}
-    <option value="{{ c.id }}" {% if c.id == selected_case.id %}selected{% endif %}>
-      {{ c.debtor_business_name or c.debtor_first + " " + c.debtor_last }} – {{ c.balance|default(0)|money }}
-      {% if c.status != 'Open' %} ({{ c.status }}){% endif %}
-    </option>
-  {% endfor %}
-  <option value="viewall">View All Cases →</option>
-</select>
-  </div>
+    <select name="status" id="statusSelect" required style="height:32px; font-size:12px;">
+      <option value="Open" {% if selected_case.status == 'Open' %}selected{% endif %}>Open</option>
+      <option value="Closed" {% if selected_case.status == 'Closed' %}selected{% endif %}>Closed</option>
+      <option value="On Hold" {% if selected_case.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+      <option value="Settled" {% if selected_case.status == 'Settled' %}selected{% endif %}>Settled</option>
+    </select>
+
+    <select name="substatus" id="substatusSelect" style="height:32px; font-size:12px;">
+      <!-- Filled by JS below -->
+    </select>
+
+    <input type="date" name="next_action_date" value="{{ selected_case.next_action_date or '' }}" style="height:32px; font-size:12px;">
+
+    <button type="submit" class="btn" style="height:32px; font-size:11px; padding:0 10px;">Action</button>
+
+    {% if status_history %}
+    <a href="{{ url_for('case.undo_status', case_id=selected_case.id) }}" style="font-size:11px; color:#c0392b;" onclick="return confirm('Undo last status change?')">Undo</a>
+    {% else %}
+    <span style="font-size:11px; color:#ccc;">Undo</span>
+    {% endif %}
+  </form>
+</div>
+
+<div style="padding:10px; background:#ffffff; border-right:1px solid #eaeaea;">
+  <form action="{{ url_for('case.update_case_status') }}" method="post" style="display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:6px; align-items:center;">
+    <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+
+    <select name="status" id="statusSelect" required style="height:32px; font-size:12px;">
+      <option value="Open" {% if selected_case.status == 'Open' %}selected{% endif %}>Open</option>
+      <option value="Closed" {% if selected_case.status == 'Closed' %}selected{% endif %}>Closed</option>
+      <option value="On Hold" {% if selected_case.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+      <option value="Settled" {% if selected_case.status == 'Settled' %}selected{% endif %}>Settled</option>
+    </select>
+
+    <select name="substatus" id="substatusSelect" style="height:32px; font-size:12px;">
+      <!-- Filled by JavaScript -->
+    </select>
+
+    <input type="date" name="next_action_date" value="{{ selected_case.next_action_date or '' }}" style="height:32px; font-size:12px;">
+
+    <button type="submit" class="btn" style="height:32px; font-size:11px; padding:0 10px;">Action</button>
+
+    {% if status_history %}
+      <a href="{{ url_for('case.undo_status', case_id=selected_case.id) }}" style="font-size:11px; color:#c0392b;" onclick="return confirm('Undo last status change?')">Undo</a>
+    {% else %}
+      <span style="font-size:11px; color:#ccc;">Undo</span>
+    {% endif %}
+  </form>
+
+  <!-- JavaScript for dynamic sub-status dropdown -->
+  <script>
+    const substatuses = {
+      'Open': ['Awaiting Instruction', 'Tracing', 'Letter Before Action', 'Legal Action'],
+      'On Hold': ['Payment Plan', 'Disputed', 'Awaiting Docs'],
+      'Closed': ['Paid in Full', 'Written Off', 'Returned'],
+      'Settled': ['Part Payment', 'Full Settlement']
+    };
+
+    function updateSubstatus() {
+      const status = document.getElementById('statusSelect').value;
+      const sub = document.getElementById('substatusSelect');
+      sub.innerHTML = '<option value="">—</option>';
+      if (substatuses[status]) {
+        substatuses[status].forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s;
+          opt.text = s;
+          if (s === "{{ selected_case.substatus }}") opt.selected = true;
+          sub.add(opt);
+        });
+      }
+    }
+    document.getElementById('statusSelect').addEventListener('change', updateSubstatus);
+    updateSubstatus(); // run on page load
+  </script>
+</div>
 
 </div>
 {% endif %}
@@ -883,6 +932,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
