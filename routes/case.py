@@ -256,6 +256,43 @@ def update_case_status():
     return redirect(url_for('case.dashboard', case_id=case_id))
 
 
+@case_bp.route('/undo_status/<int:case_id>')
+@login_required
+def undo_status(case_id):
+    db = get_db()
+    c = db.cursor()
+    
+    # Get the last status change
+    c.execute("""
+        SELECT old_status, old_substatus, old_next_action_date
+        FROM case_status_history 
+        WHERE case_id = %s 
+        ORDER BY changed_at DESC 
+        LIMIT 1
+    """, (case_id,))
+    last = c.fetchone()
+    
+    if last:
+        # Revert to old values
+        c.execute("""
+            UPDATE cases 
+            SET 
+                status = %s, 
+                substatus = %s, 
+                next_action_date = %s 
+            WHERE id = %s
+        """, (last['old_status'], last['old_substatus'], last['old_next_action_date'], case_id))
+        
+        # Delete the history entry from history
+        c.execute("DELETE FROM case_status_history WHERE case_id = %s AND old_status = %s", (case_id, last['old_status']))
+        
+        db.commit()
+    
+    return redirect(url_for('case.dashboard', case_id=case_id))
+
+
+
+
 # ----------------------------------------------------------------------
 #  MAIN DASHBOARD - THE BIG ONE
 # ----------------------------------------------------------------------
