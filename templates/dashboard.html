@@ -661,14 +661,36 @@ th { background:#f5f5f5; }
   </div>
 </div>
 
-  <div id="caseModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('caseModal')">&times;</span>
-      <h3>Add New Case</h3>
-      <form action="/add_case" method="post">
-        </form>
-    </div>
+<div id="caseModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('caseModal')">&times;</span>
+    <h3>Add New Case</h3>
+    <form action="{{ url_for('case.add_case') }}" method="post">
+      <select name="client_id" required style="width:100%; margin-bottom:10px; height:32px;">
+        <option value="">-- Select Client --</option>
+        {% for client in clients %}
+          <option value="{{ client.id }}">{{ client.business_name }} (ID: {{ client.id }})</option>
+        {% endfor %}
+      </select>
+
+      <input type="text" name="debtor_business_type" placeholder="Debtor Business Type (e.g. Ltd, Sole Trader)" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="text" name="debtor_business_name" placeholder="Debtor Business Name" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="text" name="debtor_first" placeholder="Debtor First Name" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="debtor_last" placeholder="Debtor Last Name" required style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="tel" name="phone" placeholder="Phone" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="email" name="email" placeholder="Email" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="postcode" placeholder="Postcode" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <label style="display:block; margin:10px 0 5px 0; font-weight:bold;">Next Action Date (optional)</label>
+      <input type="date" name="next_action_date" style="width:100%; margin-bottom:15px; height:32px;">
+
+      <button type="submit" class="btn" style="width:100%;">Add Case</button>
+    </form>
   </div>
+</div>
 
   <div id="noteEditModal" class="modal">
     <div class="modal-content" style="width:550px;">
@@ -852,6 +874,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
