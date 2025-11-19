@@ -367,7 +367,7 @@ th { background:#f5f5f5; }
     
 <div class="btn-group">
 
-  <button class="btn" onclick="location.href='/'">Home</button>
+ <button class="btn" onclick="location.href='{{ url_for('case.dashboard') }}'">Home</button>
   <button class="btn" onclick="openModal('clientModal')">+ Add Client</button>
   <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
   <button class="btn" onclick="location.href='/report'">Reports</button>
@@ -381,8 +381,8 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <button class="btn" onclick="location.href='/logout'">Logout</button>
-
+<button class="btn" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
+  
 </div>
 
 
@@ -546,7 +546,7 @@ th { background:#f5f5f5; }
       <div class="section" style="display:flex; flex-direction:column; height:100%;">
         <h3>Transactions</h3>
         <div class="add-bar-container">
-          <form class="add-bar" action="/add_transaction" method="post">
+          <form class="add-bar" action="{{ url_for('case.add_transaction') }}" method="post">
             <input type="hidden" name="case_id" value="{{ selected_case.id }}">
             <select name="type" id="transType" required>
               <option>Invoice</option>
@@ -665,7 +665,7 @@ th { background:#f5f5f5; }
     <div class="modal-content" style="width:550px;">
       <span class="close" onclick="closeModal('noteEditModal')">&times;</span>
       <h3>Edit Note</h3>
-      <form id="noteEditForm" action="/edit_note" method="post">
+      <form id="noteEditForm" action="{{ url_for('case.edit_note') }}" method="post">
         <input type="hidden" name="note_id" id="editNoteId">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
         
@@ -691,7 +691,7 @@ th { background:#f5f5f5; }
     <div class="modal-content" style="width:550px;">
       <span class="close" onclick="closeModal('transEditModal')">&times;</span>
       <h3>Edit Transaction</h3>
-      <form id="transEditForm" action="/edit_transaction" method="post">
+      <form id="transEditForm" action="{{ url_for('case.edit_transaction') }}" method="post">
         <input type="hidden" name="trans_id" id="editTransId">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
         
