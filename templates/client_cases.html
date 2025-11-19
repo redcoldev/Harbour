@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ client.business_name }} - All Cases</title>
+  <style>
+    body { font-family: Arial; padding:20px; background:#f9f9f9; }
+    a { color:rgb(227,82,5); text-decoration:none; font-weight:bold; }
+    a:hover { text-decoration:underline; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { padding:8px; border-bottom:1px solid #ddd; text-align:left; }
+    th { background:#eee; }
+  </style>
+</head>
+<body>
+  <a href="{{ url_for('case.dashboard') }}">← Back to Dashboard</a>
+  <h1>{{ client.business_name }} - All Cases ({{ cases|length }})</h1>
+  <table>
+    <tr><th>Case ID</th><th>Debtor</th><th>Status</th><th>Balance</th></tr>
+    {% for c in cases %}
+    {% set bal = c.balance|default(0)|float %}
+    <tr>
+      <td><a href="{{ url_for('case.dashboard') }}?case_id={{ c.id }}">{{ c.id }}</a></td>
+      <td><a href="{{ url_for('case.dashboard') }}?case_id={{ c.id }}">{{ c.debtor_business_name or c.debtor_first + " " + c.debtor_last }}</a></td>
+      <td>{{ c.status or '—' }}</td>
+      <td>{{ bal|money }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
