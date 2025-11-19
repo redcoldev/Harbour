@@ -741,19 +741,27 @@ th { background:#f5f5f5; }
     }
 
     // TRANSACTION EDIT FUNCTION (FIXED)
-    function openEditTransactionModal(id) {
-      fetch(`/get_transaction/${id}`)
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('editTransId').value = data.id;
-          document.getElementById('editTransAmount').value = data.amount;
-          document.getElementById('editTransNote').value = data.description || '';
-          document.getElementById('editTransRecoverable').checked = data.recoverable == 1;
-          document.getElementById('editTransBillable').checked = data.billable == 1;
-          openModal('transEditModal');
-        })
-        .catch(error => console.error('Error fetching transaction:', error));
-    }
+function openEditTransactionModal(id) {
+  fetch(`/get_transaction/${id}`)
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('editTransId').value = data.id;
+      document.getElementById('editTransAmount').value = data.amount;
+      document.getElementById('editTransNote').value = data.description || '';
+
+      const chargeOptions = document.getElementById('chargeOptions');
+      if (data.type === 'Charge') {
+        chargeOptions.style.display = 'flex';
+        document.getElementById('editTransRecoverable').checked = data.recoverable;
+        document.getElementById('editTransBillable').checked = data.billable;
+      } else {
+        chargeOptions.style.display = 'none';
+      }
+
+      openModal('transEditModal');
+    })
+    .catch(error => console.error('Error:', error));
+}
 
     // Delete Functions
     function deleteNote(id) {
@@ -835,6 +843,7 @@ th { background:#f5f5f5; }
 
 </body>
 </html>
+
 
 
 
