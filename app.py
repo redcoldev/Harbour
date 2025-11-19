@@ -1,47 +1,38 @@
 # =============================================================================
-#  EXTENSIONS - SHARED STUFF USED BY THE WHOLE APP
-#  • Database connection (get_db / close_db)
-#  • Jinja filters: money formatting and date formatting
-#  • Imported in app.py and used everywhere
-#  DO NOT TOUCH unless you know what you're doing
+#  MAIN APP ENTRY POINT - app.py
+#  This file is now TINY and CLEAN. It only creates the app and registers blueprints
 # =============================================================================
 
-import os
-from flask import g
-import psycopg
-from psycopg.rows import dict_row
-from datetime import datetime
+from flask import Flask
+from extensions import get_db, close_db, money, format_date
+from routes.auth import auth_bp
+from routes.client import client_bp
+from routes.case import case_bp
+from routes.reports import reports_bp
+from routes.admin import admin_bp
 
-DATABASE_URL = os.environ['DATABASE_URL']
 
-def get_db():
-    if 'db' not in g:
-        g.db = psycopg.connect(DATABASE_URL, row_factory=dict_row)
-    return g.db
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = 'supersecretkey'  # TODO: move to env var
 
-def close_db(e=None):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
+    app.teardown_appcontext(close_db)
 
-# =============================================================================
-#  JINJA FILTERS - USED IN TEMPLATES FOR £ AND DATES
-# =============================================================================
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(client_bp)
+    app.register_blueprint(case_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(admin_bp)
 
-def money(value):
-    if value is None or value == '':
-        return "£0.00"
-    try:
-        return f"£{float(value):,.2f}"
-    except (TypeError, ValueError):
-        return str(value)
+    app.jinja_env.filters['money'] = money
+    app.jinja_env.filters['format_date'] = format_date
 
-def format_date(date_obj):
-    if not date_obj:
-        return ''
-    if isinstance(date_obj, str):
-        try:
-            date_obj = datetime.strptime(date_obj, '%Y-%m-%d').date()
-        except:
-            return date_obj
-    return date_obj.strftime('%d/%m/%Y')
+    return app
+
+
+# This is what Gunicorn needs — the app object at module level
+app = create_app()
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
