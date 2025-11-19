@@ -361,7 +361,10 @@ th { background:#f5f5f5; }
 <body>
 
   <div class="header">
-    <img src="/static/helm-logo.png" alt="Helm">
+    
+    <a href="{{ url_for('case.dashboard') }}">
+  <img src="/static/helm-logo.png" alt="Helm" style="height:45px;">
+</a>
     
 <div class="btn-group">
 
@@ -885,6 +888,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
