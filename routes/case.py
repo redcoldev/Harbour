@@ -261,33 +261,44 @@ def update_case_status():
 def undo_status(case_id):
     db = get_db()
     c = db.cursor()
-    
+   
     # Get the last status change
     c.execute("""
-        SELECT old_status, old_substatus, old_next_action_date
-        FROM case_status_history 
-        WHERE case_id = %s 
-        ORDER BY changed_at DESC 
+        SELECT old_status, old_substatus
+        FROM case_status_history
+        WHERE case_id = %s
+        ORDER BY changed_at DESC
         LIMIT 1
     """, (case_id,))
     last = c.fetchone()
-    
+   
     if last:
-        # Revert to old values
+        old_status = last['old_status']
+        old_substatus = last['old_substatus'] or None
+
+        # Revert status and substatus
         c.execute("""
-            UPDATE cases 
-            SET 
-                status = %s, 
-                substatus = %s, 
-                next_action_date = %s 
+            UPDATE cases
+            SET status = %s, substatus = %s
             WHERE id = %s
-        """, (last['old_status'], last['old_substatus'], last['old_next_action_date'], case_id))
-        
-        # Delete the history entry from history
-        c.execute("DELETE FROM case_status_history WHERE case_id = %s AND old_status = %s", (case_id, last['old_status']))
-        
+        """, (old_status, old_substatus, case_id))
+
+        # Optional: also clear next_action_date on undo (or leave it — up to you)
+        # Most people prefer to clear it so it's not stuck on an old date
+        c.execute("UPDATE cases SET next_action_date = NULL WHERE id = %s", (case_id,))
+
+        # Remove the history entry (so you can't undo twice)
+        c.execute("""
+            DELETE FROM case_status_history
+            WHERE case_id = %s
+            AND old_status = %s
+            AND (old_substatus = %s OR (old_substatus IS NULL AND %s IS NULL))
+            ORDER BY changed_at DESC LIMIT 1
+        """, (case_id, old_status, old_substatus, old_substatus))
+
         db.commit()
-    
+        flash("Status undone successfully", "success")
+   
     return redirect(url_for('case.dashboard', case_id=case_id))
 
 
