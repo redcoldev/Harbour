@@ -399,9 +399,9 @@ th { background:#f5f5f5; }
 
 
 {% if selected_case and case_client %}
-<div class="info-box" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px; line-height:1.35; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
+<div class="info-box" style="display:grid; grid-template-columns:1fr 1fr 0.8fr; gap:0px; font-size:13px; line-height:1.35; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; padding:0; margin:10px 15px;">
 
-  <div style="padding:10px; background:#f9fbff; border-right:1px solid #eaeaea; border-bottom:1px solid #eaeaea;">
+  <div style="padding:10px; background:#f9fbff; border-right:1px solid #eaeaea;">
     <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Debtor</div>
     <div style="font-size:18px; font-weight:600; margin-bottom:2px;">
       {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}
@@ -413,7 +413,7 @@ th { background:#f5f5f5; }
     <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
   </div>
 
-  <div style="padding:10px; background:#f9fbff; border-bottom:1px solid #eaeaea;">
+  <div style="padding:10px; background:#f9fbff; border-right:1px solid #eaeaea;">
     <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Client</div>
     <div style="font-size:18px; font-weight:600; margin-bottom:2px;">{{ case_client.business_name }}</div>
     <div style="color:#666; font-size:0.9em; margin-bottom:4px;">ID: {{ case_client.id }}</div>
@@ -423,68 +423,9 @@ th { background:#f5f5f5; }
     BACS: {{ case_client.bacs_details or '—' }}
   </div>
 
-
- 
-
-  
-<div style="padding:10px; background:#ffffff; border-right:1px solid #eaeaea;">
-  <strong style="font-size:12px; display:block; margin-bottom:6px;">Change Status</strong>
-  <form action="{{ url_for('case.update_case_status') }}" method="post" style="display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:6px; align-items:center;">
-    <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-
-    <select name="status" id="statusSelect" required style="height:32px; font-size:12px;">
-      <option value="Open" {% if selected_case.status == 'Open' %}selected{% endif %}>Open</option>
-      <option value="Closed" {% if selected_case.status == 'Closed' %}selected{% endif %}>Closed</option>
-      <option value="On Hold" {% if selected_case.status == 'On Hold' %}selected{% endif %}>On Hold</option>
-      <option value="Settled" {% if selected_case.status == 'Settled' %}selected{% endif %}>Settled</option>
-    </select>
-
-    <select name="substatus" id="substatusSelect" style="height:32px; font-size:12px;">
-      </select>
-
-    <input type="date" name="next_action_date" value="{{ selected_case.next_action_date or '' }}" style="height:32px; font-size:12px;">
-
-    <button type="submit" class="btn" style="height:32px; font-size:11px; padding:0 10px;">Action</button>
-
-    {% if status_history %}
-      <a href="{{ url_for('case.undo_status', case_id=selected_case.id) }}" style="font-size:11px; color:#c0392b;" onclick="return confirm('Undo last status change?')">Undo</a>
-    {% else %}
-      <span style="font-size:11px; color:#ccc;">Undo</span>
-    {% endif %}
-  </form>
-
-  <script>
-    const substatuses = {
-      'Open': ['Awaiting Instruction', 'Tracing', 'Letter Before Action', 'Legal Action'],
-      'On Hold': ['Payment Plan', 'Disputed', 'Awaiting Docs'],
-      'Closed': ['Paid in Full', 'Written Off', 'Returned'],
-      'Settled': ['Part Payment', 'Full Settlement']
-    };
-
-    function updateSubstatus() {
-      const status = document.getElementById('statusSelect').value;
-      const sub = document.getElementById('substatusSelect');
-      sub.innerHTML = '<option value="">—</option>';
-      if (substatuses[status]) {
-        substatuses[status].forEach(s => {
-          const opt = document.createElement('option');
-          opt.value = s;
-          opt.text = s;
-          if (s === "{{ selected_case.substatus }}") opt.selected = true;
-          sub.add(opt);
-        });
-      }
-    }
-    document.getElementById('statusSelect').addEventListener('change', updateSubstatus);
-    updateSubstatus(); // run on page load
-  </script>
-</div>
-
-
-
-<div style="padding:10px; background:#ffffff;">
+  <div style="padding:10px; background:#ffffff;">
     <strong style="font-size:12px;">All cases for this client ({{ client_cases|length }})</strong>
-    <select onchange="if(this.value==='viewall') location.href='{{ url_for('client.client_cases', client_id=case_client.id) }}'; else if(this.value) location='?case_id='+this.value;" 
+    <select onchange="if(this.value==='viewall') location.href='/client/{{ case_client.id }}'; else if(this.value) location='?case_id='+this.value;" 
             style="width:100%; padding:5px; margin-top:4px; font-size:12px; border:1px solid #ccc; border-radius:4px; height:32px;">
       <option value="">— Switch Case —</option>
       {% for c in client_cases %}
@@ -496,16 +437,8 @@ th { background:#f5f5f5; }
       {% endfor %}
       <option value="viewall">View All Cases →</option>
     </select>
-
-
-    
   </div>
-
-  </div>
-
-
-
-      
+</div>
 {% endif %}
 
 
@@ -931,4 +864,5 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
