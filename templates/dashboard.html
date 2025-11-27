@@ -373,7 +373,6 @@ th { background:#f5f5f5; }
   <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
   <button class="btn" onclick="location.href='{{ url_for('reports.report_page') }}'">Reports</button>
 
-  <!-- SETUP DROPDOWN -->
   <div class="dropdown">
     <button class="btn dropdown-btn">Setup ▼</button>
     <div class="dropdown-content">
@@ -436,8 +435,7 @@ th { background:#f5f5f5; }
     </select>
 
     <select name="substatus" id="substatusSelect" style="height:32px; font-size:12px;">
-      <!-- Filled by JavaScript -->
-    </select>
+      </select>
 
     <input type="date" name="next_action_date" value="{{ selected_case.next_action_date or '' }}" style="height:32px; font-size:12px;">
 
@@ -450,7 +448,6 @@ th { background:#f5f5f5; }
     {% endif %}
   </form>
 
-  <!-- JavaScript for dynamic sub-status dropdown -->
   <script>
     const substatuses = {
       'Open': ['Awaiting Instruction', 'Tracing', 'Letter Before Action', 'Legal Action'],
@@ -480,8 +477,7 @@ th { background:#f5f5f5; }
 
 
 
-<!-- All cases dropdown – restored and fixed -->
-  <div style="padding:10px; background:#ffffff;">
+<div style="padding:10px; background:#ffffff;">
     <strong style="font-size:12px;">All cases for this client ({{ client_cases|length }})</strong>
     <select onchange="if(this.value==='viewall') location.href='{{ url_for('client.client_cases', client_id=case_client.id) }}'; else if(this.value) location='?case_id='+this.value;" 
             style="width:100%; padding:5px; margin-top:4px; font-size:12px; border:1px solid #ccc; border-radius:4px; height:32px;">
@@ -620,7 +616,6 @@ th { background:#f5f5f5; }
 
     <button type="submit">Add</button>
 
-    <!-- Charge options — now a clean second row, left-aligned, no pushing -->
     <div id="chargeOpts" style="display:none; grid-column:1 / 5; margin-top:6px; padding-left:8px;">
       <label style="margin-right:25px; font-size:11px;">
         <input type="checkbox" name="recoverable" value="1"> Recoverable
@@ -822,9 +817,36 @@ th { background:#f5f5f5; }
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // Search Functions (As requested by the user previously)
-    // ... search functions ...
+    // Search Functions (MOVED HERE FOR RELIABILITY)
+    function doSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (q.length < 2) {
+        document.getElementById('searchResults').innerHTML = '';
+        return;
+      }
 
+      fetch(`/search?q=${encodeURIComponent(q)}`)
+        .then(response => response.json())
+        .then(results => {
+          let html = '';
+          if (results.length === 0) {
+            html = '<p style="margin:8px 0; color:#777; text-align:center;">No results found.</p>';
+          } else {
+            results.forEach(r => {
+              const debtor = r.debtor_name || 'N/A';
+              const contact = [r.postcode, r.email, r.phone].filter(Boolean).join(' | ');
+              html += `<div style="border-bottom:1px solid #eee; padding:6px 0;">
+                        <a href="/dashboard?case_id=${r.case_id}" style="font-weight:bold; color:#333; text-decoration:none;">Case #${r.case_id} (${debtor})</a>
+                        <div style="font-size:11px; color:#555;">Client: ${r.client_name}</div>
+                        <div style="font-size:11px; color:#555;">${contact}</div>
+                       </div>`;
+            });
+          }
+          document.getElementById('searchResults').innerHTML = html;
+        })
+        .catch(error => console.error('Search error:', error));
+    }
+    
     // Transaction Logic
     document.getElementById('transType').addEventListener('change', function() {
         document.getElementById('chargeOpts').style.display = (this.value === 'Charge' ? 'grid' : 'none');
@@ -904,65 +926,5 @@ function openEditTransactionModal(id) {
     });
   </script>
 
-  <script>
-    // This script block should contain the implementation for client/case/api modals 
-    // if you want the header buttons to work beyond opening the modal placeholder.
-
-    // Example client search functions for completeness:
-    function doSearch() {
-      const q = document.getElementById('searchInput').value.trim();
-      if (q.length < 2) {
-        document.getElementById('searchResults').innerHTML = '';
-        return;
-      }
-
-      fetch(`/search?q=${encodeURIComponent(q)}`)
-        .then(response => response.json())
-        .then(results => {
-          let html = '';
-          if (results.length === 0) {
-            html = '<p style="margin:8px 0; color:#777; text-align:center;">No results found.</p>';
-          } else {
-            results.forEach(r => {
-              const debtor = r.debtor_name || 'N/A';
-              const contact = [r.postcode, r.email, r.phone].filter(Boolean).join(' | ');
-              html += `<div style="border-bottom:1px solid #eee; padding:6px 0;">
-                        <a href="/dashboard?case_id=${r.case_id}" style="font-weight:bold; color:#333; text-decoration:none;">Case #${r.case_id} (${debtor})</a>
-                        <div style="font-size:11px; color:#555;">Client: ${r.client_name}</div>
-                        <div style="font-size:11px; color:#555;">${contact}</div>
-                       </div>`;
-            });
-          }
-          document.getElementById('searchResults').innerHTML = html;
-        })
-        .catch(error => console.error('Search error:', error));
-    }
-  </script>
-
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
