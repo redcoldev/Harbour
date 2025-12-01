@@ -437,28 +437,40 @@ th { background:#f5f5f5; }
 
   <!-- CASE SWITCHER (40%) -->
 <div style="padding:12px 10px; background:#ffffff; display:flex; flex-direction:column;">
-  <strong style="font-size:13px; margin-bottom:8px;">
-    {{ case_client.business_name }} – {{ client_cases|length }} case{{ client_cases|length|pluralize }}
+  <strong style="font-size:13px; margin-bottom:8px; color:#333;">
+    {{ case_client.business_name }} 
+    <span style="color:#666; font-weight:normal;">
+      – {{ client_cases|length }} case{{ client_cases|length == 1 ? '' : 's' }}
+    </span>
   </strong>
-  <div style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+
+  <div style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:6px; background:#fcfcfc; font-size:12.5px;">
     {% for c in client_cases %}
-      {% set bal = c.balance|default(0)|float %}
-      <a href="?case_id={{ c.id }}" style="display:block; padding:8px 10px; border-bottom:1px solid #eee; text-decoration:none; 
-          background: {% if c.id == selected_case.id %}#e8f4ff{% else %}transparent{% endif %}; 
-          color:#333;">
-        <div style="font-weight:600; font-size:13px;">
-          {{ c.debtor_business_name or c.debtor_first + " " + c.debtor_last }}
-          <span style="float:right; font-weight:bold; color: {% if bal > 0 %}#c00{% else %}#090{% endif %}">
+      {% set bal = (c.balance|default(0))|float %}
+      <a href="?case_id={{ c.id }}"
+         style="display:block; padding:9px 11px; border-bottom:1px solid #eee; text-decoration:none;
+                background: {% if c.id == selected_case.id %}#e3f2fd{% else %}transparent{% endif %};
+                color:#333; transition:background 0.2s;">
+        <div style="font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
+            {{ c.debtor_business_name or (c.debtor_first ~ ' ' ~ c.debtor_last) }}
+          </span>
+          <span style="font-weight:bold; color:{{ 'red' if bal > 0 else '#2e7d32' }}; flex-shrink:0;">
             {{ bal|money }}
           </span>
         </div>
-        <div style="font-size:11px; color:#666; margin-top:2px;">
-          Case {{ c.id }} • {{ c.status }} • Opened {{ c.created_at|format_date }}
+        <div style="color:#666; margin-top:3px; font-size:11px;">
+          Case {{ c.id }} • {{ c.status|default('Open') }} 
+          {% if c.created_at %}• {{ c.created_at|format_date }}{% endif %}
         </div>
       </a>
     {% endfor %}
-    <a href="/client/{{ case_client.id }}" style="display:block; padding:10px; text-align:center; background:#f0f0f0; font-weight:bold; color:#E35205;">
-      View all cases →
+
+    <!-- "View all cases" footer -->
+    <a href="/client/{{ case_client.id }}"
+       style="display:block; padding:11px; text-align:center; background:#f5f5f5; 
+              color:#E35205; font-weight:bold; border-top:1px solid #ddd; text-decoration:none;">
+      → View all cases for this client
     </a>
   </div>
 </div>
@@ -888,6 +900,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
