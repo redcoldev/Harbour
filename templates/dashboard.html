@@ -437,9 +437,9 @@ th { background:#f5f5f5; }
 
   <!-- CASE SWITCHER (40%) -->
   <div style="padding:12px 10px; background:#ffffff; display:flex; flex-direction:column;">
-    <strong style="font-size:12px; margin-bottom:6px;">All cases for this client ({{ client_cases|length }})</strong>
+    <strong style="font-size:14px; margin-bottom:6px;">Switch case for this client ({{ client_cases|length }})</strong>
     <select onchange="if(this.value==='viewall') location.href='/client/{{ case_client.id }}'; else if(this.value) location='?case_id='+this.value;" 
-            style="flex:1; width:100%; padding:5px; font-size:12px; border:1px solid #ccc; border-radius:4px;">
+            style="flex:1; width:100%; padding:5px; font-size:14px; border:1px solid #ccc; border-radius:4px;">
       <option value="">— Switch Case —</option>
       {% for c in client_cases %}
         {% set bal = c.balance|default(0)|float %}
@@ -878,6 +878,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
