@@ -1,5 +1,5 @@
 # =============================================================================
-# REPORTS ROUTES – FINAL WORKING VERSION (no code column required)
+# REPORTS ROUTES – FINAL VERSION (NO CODE COLUMN NEEDED)
 # =============================================================================
 from flask import Blueprint, request, send_file, make_response, render_template
 from flask_login import login_required
@@ -12,7 +12,7 @@ reports_bp = Blueprint('reports', __name__)
 
 
 # ----------------------------------------------------------------------
-# 1. The main report page – now with live client search
+# 1. The main report page – live client search (works even without 'code' column)
 # ----------------------------------------------------------------------
 @reports_bp.route('/report')
 @login_required
@@ -24,14 +24,14 @@ def report_page():
     db = get_db()
     c = db.cursor()
 
-    # Load ALL clients for the search dropdown – SAFE even if no 'code' column exists
-    c.execute("SELECT id, business_name, COALESCE(code, '') AS code FROM clients ORDER BY business_name")
+    # Load ALL clients – no reference to 'code' column at all
+    c.execute("SELECT id, business_name FROM clients ORDER BY business_name")
     all_clients = c.fetchall()
 
     selected_client = None
     report_html = ""
 
-    # Resolve client_id from either client_id or old client_code param
+    # Backwards compatibility: old ?client_code= links
     if not client_id and client_code:
         c.execute("SELECT id FROM clients WHERE id = %s", (client_code,))
         row = c.fetchone()
@@ -39,7 +39,7 @@ def report_page():
             client_id = str(row['id'])
 
     if client_id:
-        c.execute("SELECT id, business_name, COALESCE(code, '') AS code FROM clients WHERE id = %s", (client_id,))
+        c.execute("SELECT id, business_name FROM clients WHERE id = %s", (client_id,))
         client_row = c.fetchone()
         if client_row:
             selected_client = client_row
@@ -99,7 +99,7 @@ def report_page():
         clients_json=[{
             'id': str(row['id']),
             'business_name': row['business_name'],
-            'code': row['code'] or ''
+            'code': ''  # no code column → just empty
         } for row in all_clients],
         selected_client=selected_client,
         report_html=report_html,
@@ -108,7 +108,7 @@ def report_page():
 
 
 # ----------------------------------------------------------------------
-# 2. Excel export – works with client_id or client_code
+# 2. Excel export
 # ----------------------------------------------------------------------
 @reports_bp.route('/export_excel')
 @login_required
@@ -160,7 +160,7 @@ def export_excel():
 
 
 # ----------------------------------------------------------------------
-# 3. PDF export – same fix
+# 3. PDF export
 # ----------------------------------------------------------------------
 @reports_bp.route('/export_pdf')
 @login_required
