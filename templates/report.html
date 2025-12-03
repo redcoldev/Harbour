@@ -1,37 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Harbour CRM by Redwood Collections</title>
+  <title>Client Report – Harbour CRM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/static/favicon.png" type="image/png">
   <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    .header { margin-bottom: 20px; }
-    .form { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-    input, button { padding: 10px; font-size: 16px; }
-    button { background: rgb(227,82,5); color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .exports { margin: 20px 0; }
-    .exports a { margin-right: 10px; color: rgb(227,82,5); font-weight: bold; }
+    body { margin:0; font-family: Arial; background:#f9f9f9; }
+    .header {
+      height:80px;
+      background:rgb(162,170,173);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 30px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    }
+    .header img { height:45px; }
+    .btn-group { display:flex; gap:10px; }
+    .btn {
+      background:rgb(227,82,5);
+      color:white;
+      border:none;
+      padding:8px 14px;
+      border-radius:5px;
+      cursor:pointer;
+      font-weight:bold;
+      font-size:12px;
+      text-decoration:none;
+    }
+    .btn:hover { opacity:0.9; }
+    .container { padding:30px; max-width:1400px; margin:0 auto; }
+    .search-box {
+      background:white; padding:20px; border-radius:8px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:25px;
+    }
+    .search-input {
+      width:100%; padding:14px; font-size:16px; border:1px solid #ccc;
+      border-radius:6px; box-sizing:border-box;
+    }
+    .client-list {
+      margin-top:12px; max-height:320px; overflow-y:auto;
+      border:1px solid #eee; border-radius:6px; background:#fcfcfc;
+    }
+    .client-item {
+      padding:12px 16px; border-bottom:1px solid #eee; cursor:pointer;
+      transition:background 0.2s;
+    }
+    .client-item:hover { background:#f0f8ff; }
+    .client-item:last-child { border-bottom:none; }
+    .client-code { color:#E35205; font-weight:bold; font-size:0.9em; }
+    .no-results { padding:20px; text-align:center; color:#777; }
+    .exports {
+      margin:20px 0; padding:15px; background:white; border-radius:8px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1); display:flex; gap:15px;
+    }
+    .exports a {
+      background:rgb(227,82,5); color:white; padding:12px 20px;
+      border-radius:6px; text-decoration:none; font-weight:bold;
+    }
+    .report-content {
+      background:white; padding:30px; border-radius:8px;
+      box-shadow:0 2px 15px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
+
+  <!-- EXACT SAME HEADER AS DASHBOARD -->
   <div class="header">
-    <a href="/">← Back to Dashboard</a>
-    <h1>Client Report</h1>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <a href="/"><img src="/static/redwood-logo.png" alt="Harbour"></a>
+    </div>
+    <div class="btn-group">
+      <a href="/" class="btn">Home</a>
+      <a href="/add_client" class="btn">+ Add Client</a>
+      <a href="/add_case" class="btn">+ Add Case</a>
+      <a href="/report" class="btn" style="background:#E35205;">Reports</a>
+      <a href="/setup" class="btn">Setup ▼</a>
+      <a href="/logout" class="btn">Logout</a>
+    </div>
+    <div style="color:white; font-weight:bold;">REDWOOD COLLECTIONS</div>
   </div>
 
-  <div class="form">
-    <input type="text" id="clientCode" placeholder="Enter Client Code" value="{{ client_code }}">
-    <button onclick="location.href='?client_code=' + document.getElementById('clientCode').value">Generate</button>
+  <div class="container">
+    <h1 style="margin-top:0; color:#333;">Client Report</h1>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" class="search-input"
+             placeholder="Search by client name or code..." autofocus
+             value="{{ query|default('') }}">
+      <div id="clientList" class="client-list"></div>
+    </div>
+
+    {% if selected_client %}
+    <div class="exports">
+      <a href="/export_excel?client_id={{ selected_client.id }}">Download Excel</a>
+      <a href="/export_pdf?client_id={{ selected_client.id }}">Download PDF</a>
+    </div>
+    {% endif %}
+
+    <div class="report-content">
+      {% if selected_client %}
+        <h2>Report for: {{ selected_client.business_name }} ({{ selected_client.code }})</h2>
+        {{ report_html | safe }}
+      {% else %}
+        <p style="text-align:center; color:#777; margin-top:60px; font-size:1.2em;">
+          Start typing to find a client and generate their report
+        </p>
+      {% endif %}
+    </div>
   </div>
 
-  {% if client_code %}
-  <div class="exports">
-    <a href="/export_excel?client_code={{ client_code }}">📊 Download Excel</a>
-    <a href="/export_pdf?client_code={{ client_code }}">🖨️ Download PDF</a>
-  </div>
-  {% endif %}
+  <script>
+    const clients = {{ clients_json | safe }};
+    const searchInput = document.getElementById('searchInput');
+    const clientList = document.getElementById('clientList');
 
-  <div>
-    {{ report_html | safe }}
-  </div>
+    function renderClients(filter = '') {
+      const filtered = clients.filter(c =>
+        c.business_name.toLowerCase().includes(filter) ||
+        c.code.toLowerCase().includes(filter)
+      );
+
+      if (filtered.length === 0) {
+        clientList.innerHTML = '<div class="no-results">No clients found</div>';
+        return;
+      }
+
+      clientList.innerHTML = filtered.map(c => `
+        <div class="client-item" onclick="location.href='?client_id=${c.id}'">
+          <div><strong>${c.business_name}</strong></div>
+          <div class="client-code">Code: ${c.code}</div>
+        </div>
+      `).join('');
+    }
+
+    searchInput.addEventListener('input', e => {
+      renderClients(e.target.value.toLowerCase().trim());
+    });
+
+    renderClients(searchInput.value.toLowerCase());
+  </script>
 </body>
 </html>
