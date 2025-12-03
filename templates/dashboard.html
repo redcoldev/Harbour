@@ -494,7 +494,7 @@ th { background:#f5f5f5; }
           <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
             {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
           </span>
-          <span style="font-weight:bold; color:{% if bal > 0 %}#c62828{% else %}#2e7d32{% endif %};">
+      <span style="font-weight:bold; color:#000;">
             {{ bal|money }}
           </span>
         </a>
@@ -950,6 +950,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
