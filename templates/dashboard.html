@@ -704,7 +704,7 @@ th { background:#f5f5f5; }
       <select name="client_id" required style="width:100%; margin-bottom:10px; height:32px;">
         <option value="">-- Select Client --</option>
         {% for client in clients %}
-          <option value="{{ client.id }}">{{ client.business_name }} (ID: {{ client.id }})</option>
+          <option value="{{ client.id }}">{{ client.business_name }} (Client ID: {{ client.id }})</option>
         {% endfor %}
       </select>
 
@@ -901,6 +901,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
