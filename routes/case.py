@@ -359,8 +359,26 @@ def dashboard():
             c.execute("SELECT * FROM clients WHERE id = %s", (selected_case['client_id'],))
             case_client = c.fetchone()
 
+            # Load all cases for this client + calculate balance for switcher
             c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = %s ORDER BY id", (selected_case['client_id'],))
-            client_cases = c.fetchall()
+            client_cases_raw = c.fetchall()
+            client_cases = []
+            for case in client_cases_raw:
+                case_dict = dict(case)
+                # Calculate balance exactly like you do for the main case
+                c.execute("SELECT type, amount, recoverable FROM money WHERE case_id = %s", (case['id'],))
+                money_rows = c.fetchall()
+                case_balance = 0.0
+                for m in money_rows:
+                    amt = float(m['amount'])
+                    if m['type'] == 'Payment':
+                        case_balance -= amt
+                    elif m['type'] in ['Invoice', 'Interest']:
+                        case_balance += amt
+                    elif m['type'] == 'Charge' and m['recoverable']:
+                        case_balance += amt
+                case_dict['balance'] = round(case_balance, 2)
+                client_cases.append(case_dict)
 
             offset = (page - 1) * per_page
             c.execute('''
