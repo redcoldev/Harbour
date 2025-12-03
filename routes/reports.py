@@ -1,8 +1,5 @@
 # =============================================================================
-# REPORTS ROUTES – UPDATED FOR NEW report.html
-# • Live client search by name/code
-# • Uses client_id (backwards compatible with old client_code)
-# • Full Excel + PDF export
+# REPORTS ROUTES – FINAL WORKING VERSION (no code column required)
 # =============================================================================
 from flask import Blueprint, request, send_file, make_response, render_template
 from flask_login import login_required
@@ -27,8 +24,8 @@ def report_page():
     db = get_db()
     c = db.cursor()
 
-    # Load ALL clients for the search dropdown
-    c.execute("SELECT id, business_name, code FROM clients ORDER BY business_name")
+    # Load ALL clients for the search dropdown – SAFE even if no 'code' column exists
+    c.execute("SELECT id, business_name, COALESCE(code, '') AS code FROM clients ORDER BY business_name")
     all_clients = c.fetchall()
 
     selected_client = None
@@ -42,11 +39,10 @@ def report_page():
             client_id = str(row['id'])
 
     if client_id:
-        c.execute("SELECT id, business_name, code FROM clients WHERE id = %s", (client_id,))
+        c.execute("SELECT id, business_name, COALESCE(code, '') AS code FROM clients WHERE id = %s", (client_id,))
         client_row = c.fetchone()
         if client_row:
             selected_client = client_row
-            client_name = f"{client_row['business_name']} (ID: {client_row['id']})"
 
             c.execute("""
                 SELECT s.id as case_id,
@@ -77,12 +73,13 @@ def report_page():
             """
             for case_id, d in cases.items():
                 balance = d['Invoice'] + d['Charge'] + d['Interest'] - d['Payment']
+                color = "red" if balance > 0 else "green"
                 report_html += f"""
                 <tr>
                     <td>{case_id}</td><td>{d['debtor']}</td>
                     <td>£{d['Invoice']:.2f}</td><td>£{d['Payment']:.2f}</td>
                     <td>£{d['Charge']:.2f}</td><td>£{d['Interest']:.2f}</td>
-                    <td style='font-weight:bold; color:{"red" if balance > 0 else "green"};'>£{balance:.2f}</td>
+                    <td style='font-weight:bold; color:{color};'>£{balance:.2f}</td>
                 </tr>
                 """
 
@@ -99,7 +96,11 @@ def report_page():
 
     return render_template(
         'report.html',
-        clients_json=[{'id': str(row['id']), 'business_name': row['business_name'], 'code': row['code'] or ''} for row in all_clients],
+        clients_json=[{
+            'id': str(row['id']),
+            'business_name': row['business_name'],
+            'code': row['code'] or ''
+        } for row in all_clients],
         selected_client=selected_client,
         report_html=report_html,
         query=query
@@ -107,7 +108,7 @@ def report_page():
 
 
 # ----------------------------------------------------------------------
-# 2. Excel export – now works with client_id OR client_code
+# 2. Excel export – works with client_id or client_code
 # ----------------------------------------------------------------------
 @reports_bp.route('/export_excel')
 @login_required
