@@ -495,7 +495,9 @@ th { background:#f5f5f5; }
             {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
           </span>
    
-            {{ bal|money }}
+<span style="color:#000; font-weight:normal;">{{ c.balance|money }}</span>
+
+          
           </span>
         </a>
       {% endfor %}
@@ -950,6 +952,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
