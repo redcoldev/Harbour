@@ -458,43 +458,55 @@ th { background:#f5f5f5; }
     </div>
   </div>
 
-  <!-- CASE SWITCHER (40%) – ULTRA-TIGHT, ZERO PADDING -->
-  <div style="padding:10px 10px 12px; background:#fff; border:1px solid #eaeaea; display:flex; flex-direction:column; gap:4px;">
-    <div style="font-size:12.5px; font-weight:600; color:#333;">
-      Other cases for this client
-      <span style="color:#888; font-weight:normal; font-size:11px;">
-        ({{ client_cases|length }} total)
-      </span>
-    </div>
 
-    <div style="flex:1; min-height:0; max-height:96px; overflow:hidden; border:1px solid #eee; border-radius:4px; background:#fcfcfc;">
-      <div style="height:100%; overflow-y:auto; padding:0; scrollbar-width:none;"
-           onmouseenter="this.style.overflowY='auto'"
-           onmouseleave="this.style.overflowY='hidden'">
-        {% for c in client_cases %}
-          {% set bal = c.balance|default(0)|string|float|round(2) %}
-          <a href="?case_id={{ c.id }}"
-             style="display:flex; justify-content:space-between; align-items:center;
-                    height:16px; padding:0 8px; text-decoration:none;
-                    background:{% if c.id == selected_case.id %}#e8f4fd{% else %}transparent{% endif %};
-                    font-size:11.8px; line-height:1;">
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
-              {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
-            </span>
-            <span style="font-weight:bold; color:{% if bal > 0 %}#c62828{% else %}#2e7d32{% endif %}; flex-shrink:0;">
-              {{ bal|money }}
-            </span>
-          </a>
-        {% endfor %}
-      </div>
-    </div>
 
-    {% if client_cases|length > 6 %}
-    <a href="/client/{{ case_client.id }}" style="color:#E35205; font-size:11px; text-align:center; text-decoration:none; font-weight:600;">
-      → View all {{ client_cases|length }} cases
-    </a>
-    {% endif %}
+  
+<!-- CASE SWITCHER (40%) – SCROLLBAR ALWAYS VISIBLE + FIXED BALANCES -->
+<div style="padding:12px 10px; background:#fff; border:1px solid #eaeaea; display:flex; flex-direction:column;">
+  <div style="font-size:12.5px; font-weight:600; color:#333; margin-bottom:6px;">
+    Other cases for this client
+    <span style="color:#888; font-weight:normal; font-size:11px;">
+      ({{ client_cases|length }} total)
+    </span>
   </div>
+
+  <div style="flex:1; min-height:0; max-height:108px; overflow:hidden; border:1px solid #eee; border-radius:5px; background:#fcfcfc;">
+    <div style="height:100%; overflow-y:scroll; padding:0 8px 0 4px;
+                /* ← FORCE SCROLLBAR ALWAYS VISIBLE */
+                scrollbar-width: auto;
+                -ms-overflow-style: scrollbar;">
+      <!-- Webkit browsers – thin grey scrollbar, always shown -->
+      <style>
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar { width: 8px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 4px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+      </style>
+
+      {% for c in client_cases %}
+        {% set bal = (c.balance|default(0)|float)|round(2) %}
+        <a href="?case_id={{ c.id }}"
+           style="display:flex; justify-content:space-between; align-items:center;
+                  height:18px; padding:0 4px; text-decoration:none;
+                  background:{% if c.id == selected_case.id %}#e8f4fd{% else %}transparent{% endif %};
+                  font-size:11.8px; line-height:1.4;">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
+            {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
+          </span>
+          <span style="font-weight:bold; color:{% if bal > 0 %}#c62828{% else %}#2e7d32{% endif %};">
+            {{ bal|money }}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if client_cases|length > 6 %}
+  <a href="/client/{{ case_client.id }}" style="margin-top:6px; color:#E35205; font-weight:bold; font-size:11.5px; text-align:center; text-decoration:none;">
+    → View all {{ client_cases|length }} cases
+  </a>
+  {% endif %}
+</div>
 
 
   
@@ -937,6 +949,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
