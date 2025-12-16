@@ -449,8 +449,22 @@ th { background:#f5f5f5; }
   <!-- CLIENT (30%) -->
   <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
     <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Client</div>
-    <div style="font-size:18px; font-weight:600; margin-bottom:4px;">{{ case_client.business_name }}</div>
-    <div style="color:#666; font-size:0.9em; margin-bottom:6px;">ID: {{ case_client.id }}</div>
+    
+    <!-- Flex row to put name/ID on left, logo on right -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+      <div>
+        <div style="font-size:18px; font-weight:600;">{{ case_client.business_name }}</div>
+        <div style="color:#666; font-size:0.9em;">ID: {{ case_client.id }}</div>
+      </div>
+      
+      {% if case_client.id %}
+        <img src="{{ url_for('static', filename='clientlogo/' ~ case_client.id ~ '.png') }}"
+             alt="{{ case_client.business_name }} Logo"
+             class="client-logo-dashboard"
+             onerror="this.style.display='none'">
+      {% endif %}
+    </div>
+    
     <div style="line-height:1.55; flex:1;">
       {{ case_client.contact_first }} {{ case_client.contact_last }}<br>
       <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a><br>
@@ -952,6 +966,7 @@ function openEditTransactionModal(id) {
 
 </body>
 </html>
+
 
 
 
