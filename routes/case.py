@@ -317,18 +317,7 @@ def rename_debtor():
         db.commit()
     return redirect(url_for('case.dashboard', case_id=case_id))
 
-@case_bp.route('/rename_client', methods=['POST'])
-@login_required
-def rename_client():
-    db = get_db()
-    c = db.cursor()
-    client_id = request.form.get('target_id')
-    case_id = request.form.get('case_id')
-    new_name = request.form.get('new_name')
-    if client_id and new_name:
-        c.execute("UPDATE clients SET business_name = %s WHERE id = %s", (new_name, client_id))
-        db.commit()
-    return redirect(url_for('case.dashboard', case_id=case_id))
+
 
 
 # ----------------------------------------------------------------------
