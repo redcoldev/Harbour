@@ -929,78 +929,64 @@ function openEditTransactionModal(id) {
 
 
 // NEW RENAME LOGIC
-    function openRenameModal(type) {
-        const title = document.getElementById('renameTitle');
-        const label = document.getElementById('renameLabel');
-        const input = document.getElementById('renameInput');
-        const form = document.getElementById('renameForm');
-        const targetIdField = document.getElementById('renameTargetId');
+function openRenameModal(type) {
+    const title = document.getElementById('renameTitle');
+    const label = document.getElementById('renameLabel');
+    const input = document.getElementById('renameInput');
+    const form = document.getElementById('renameForm');
+    const targetIdField = document.getElementById('renameTargetId');
 
-        if (type === 'debtor') {
-            title.innerText = "Rename Debtor";
-            label.innerText = "New Debtor Business Name:";
-            input.value = "{{ selected_case.debtor_business_name or '' }}";
-            targetIdField.value = "{{ selected_case.id if selected_case else '' }}";
-            form.action = "{{ url_for('case.rename_debtor') }}";
-        } else {
-            title.innerText = "Rename Client";
-            label.innerText = "New Client Business Name:";
-            input.value = "{{ case_client.business_name if case_client else '' }}";
-            targetIdField.value = "{{ case_client.id if case_client else '' }}";
-            form.action = "{{ url_for('client.rename_client') }}";
-        }
-        openModal('renameModal');
+    if (type === 'debtor') {
+        title.innerText = "Rename Debtor";
+        label.innerText = "New Debtor Business Name:";
+        input.value = "{{ selected_case.debtor_business_name or '' }}";
+        targetIdField.value = "{{ selected_case.id if selected_case else '' }}";
+        form.action = "{{ url_for('case.rename_debtor') }}";
+    } else {
+        title.innerText = "Rename Client";
+        label.innerText = "New Client Business Name:";
+        input.value = "{{ case_client.business_name if case_client else '' }}";
+        targetIdField.value = "{{ case_client.id if case_client else '' }}";
+        form.action = "{{ url_for('client.rename_client') }}";
     }
+    openModal('renameModal');
+}
 
-    // Delete Functions
-    function deleteNote(id) {
+// Delete Functions
+function deleteNote(id) {
+  if (confirm("Delete this note?")) {
+    fetch(`/delete_note/${id}`, {method: 'POST'})
+      .then(() => location.reload());
+  }
+}
 
+function deleteTransaction(id) {
+  if (confirm("Delete this transaction?")) {
+    fetch(`/delete_transaction/${id}`, {method: 'POST'})
+      .then(() => location.reload());
+  }
+}
 
+document.getElementById('apiModal').addEventListener('transitionend', function() {
+  if (this.classList.contains('active')) loadApiKeys();
+});
 
-
-
-    
-    // Delete Functions
-    function deleteNote(id) {
-      if (confirm("Delete this note?")) {
-        fetch(`/delete_note/${id}`, {method: 'POST'})
-          .then(() => location.reload());
-      }
-    }
-
-    function deleteTransaction(id) {
-      if (confirm("Delete this transaction?")) {
-        fetch(`/delete_transaction/${id}`, {method: 'POST'})
-          .then(() => location.reload());
-      }
-    }
-
-    document.getElementById('apiModal').addEventListener('transitionend', function() {
-      if (this.classList.contains('active')) loadApiKeys();
-    });
-
-    // Global error handler – turns any JS crash into a red popup instead of breaking everything
-    window.addEventListener('error', function(e) {
-      if (e.filename && e.filename.includes('dashboard.html')) {
-        const msg = e.error ? e.error.message : e.message;
-        const line = e.lineno ? `Line ${e.lineno}` : '';
-        const box = document.createElement('div');
-        box.style.position = 'fixed';
-        box.style.top = '20px';
-        box.style.right = '20px';
-        box.style.background = '#ffebee';
-        box.style.color = '#c62828';
-        box.style.border = '2px solid #c62828';
-        box.style.padding = '15px';
-        box.style.borderRadius = '8px';
-        box.style.zIndex = '9999';
-        box.style.maxWidth = '400px';
-        box.style.fontFamily = 'Arial';
-        box.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        box.innerHTML = `<strong>JavaScript Error</strong><br>${line}: ${msg}`;
-        document.body.appendChild(box);
-      }
-    });
+// Global error handler
+window.addEventListener('error', function(e) {
+  if (e.filename && e.filename.includes('dashboard.html')) {
+    const msg = e.error ? e.error.message : e.message;
+    const line = e.lineno ? `Line ${e.lineno}` : '';
+    const box = document.createElement('div');
+    box.style.position = 'fixed'; box.style.top = '20px'; box.style.right = '20px';
+    box.style.background = '#ffebee'; box.style.color = '#c62828';
+    box.style.border = '2px solid #c62828'; box.style.padding = '15px';
+    box.style.borderRadius = '8px'; box.style.zIndex = '9999';
+    box.style.maxWidth = '400px'; box.style.fontFamily = 'Arial';
+    box.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    box.innerHTML = `<strong>JavaScript Error</strong><br>${line}: ${msg}`;
+    document.body.appendChild(box);
+  }
+});
   </script>
 
 
@@ -1026,6 +1012,7 @@ function openEditTransactionModal(id) {
   
 </body>
 </html>
+
 
 
 
