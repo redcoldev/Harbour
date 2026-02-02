@@ -1,9 +1,22 @@
+# =============================================================================
+#  CASE ROUTES - THE BIG ONE - THIS IS THE ENTIRE APP'S CORE
+#  • Main dashboard ( / and /dashboard )
+#  • Add case, add transaction, add note
+#  • Edit / delete transaction & note
+#  • Update case status
+#  • Search (cases & clients)
+#  • The get_transaction endpoint for the edit modal
+#  THIS FILE IS DELIBERATELY HUGE BECAUSE IT'S THE MAIN WORKFLOW
+#  Future dev: if you want to split this further later, go for it. For now it's all here and clearly labelled.
+# =============================================================================
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from extensions import get_db
 from datetime import date
 
 case_bp = Blueprint('case', __name__)
+
 
 # ----------------------------------------------------------------------
 #  SEARCH - global search box + client autocomplete
@@ -143,7 +156,7 @@ def get_transaction(trans_id):
     if not trans:
         return jsonify({}), 404
     data = dict(trans)
-    data['note'] = data.get('description') or ''
+    data['note'] = data.get('description') or ''  # backward compat for JS
     return jsonify(data)
 
 
@@ -202,38 +215,7 @@ def delete_note(note_id):
 
 
 # ----------------------------------------------------------------------
-#  RENAME ROUTES
-# ----------------------------------------------------------------------
-@case_bp.route('/rename_debtor', methods=['POST'])
-@login_required
-def rename_debtor():
-    db = get_db()
-    c = db.cursor()
-    case_id = request.form.get('target_id')
-    new_name = request.form.get('new_name')
-    if case_id and new_name:
-        c.execute("UPDATE cases SET debtor_business_name = %s WHERE id = %s", (new_name, case_id))
-        db.commit()
-        flash('Debtor name updated')
-    return redirect(url_for('case.dashboard', case_id=case_id))
-
-@case_bp.route('/rename_client', methods=['POST'])
-@login_required
-def rename_client():
-    db = get_db()
-    c = db.cursor()
-    client_id = request.form.get('target_id')
-    case_id = request.form.get('case_id')
-    new_name = request.form.get('new_name')
-    if client_id and new_name:
-        c.execute("UPDATE clients SET business_name = %s WHERE id = %s", (new_name, client_id))
-        db.commit()
-        flash('Client name updated')
-    return redirect(url_for('case.dashboard', case_id=case_id))
-
-
-# ----------------------------------------------------------------------
-# CASE STATUS UPDATE
+# CASE STATUS UPDATE – now includes Next Action Date
 # ----------------------------------------------------------------------
 @case_bp.route('/update_case_status', methods=['POST'])
 @login_required
@@ -241,14 +223,16 @@ def update_case_status():
     case_id = request.form['case_id']
     new_status = request.form['status']
     new_substatus = request.form.get('substatus') or None
-    new_next_action_date = request.form.get('next_action_date') or None
+    new_next_action_date = request.form.get('next_action_date') or None   # <-- NEW
 
     db = get_db()
     c = db.cursor()
 
+    # Get current values for history
     c.execute("SELECT status, substatus, next_action_date FROM cases WHERE id = %s", (case_id,))
     old = c.fetchone()
 
+    # Update the case (including next_action_date)
     c.execute("""
         UPDATE cases 
         SET status = %s, 
@@ -257,6 +241,7 @@ def update_case_status():
         WHERE id = %s
     """, (new_status, new_substatus, new_next_action_date, case_id))
 
+    # Record the change in history (only if something actually changed)
     if (old['status'] != new_status or 
         old['substatus'] != new_substatus or 
         old['next_action_date'] != new_next_action_date):
@@ -276,6 +261,8 @@ def update_case_status():
 def undo_status(case_id):
     db = get_db()
     c = db.cursor()
+
+    # Get the most recent status change
     c.execute("""
         SELECT old_status, old_substatus
         FROM case_status_history
@@ -284,21 +271,24 @@ def undo_status(case_id):
         LIMIT 1
     """, (case_id,))
     last = c.fetchone()
+
     if not last:
         flash("Nothing to undo", "info")
         return redirect(url_for('case.dashboard', case_id=case_id))
 
     old_status = last['old_status']
-    old_substatus = last['old_substatus']
+    old_substatus = last['old_substatus']  # can be NULL
 
+    # 1. Revert the case status
     c.execute("""
         UPDATE cases
         SET status = %s,
             substatus = %s,
-            next_action_date = NULL
+            next_action_date = NULL   -- clears the date when undoing (most users prefer this)
         WHERE id = %s
     """, (old_status, old_substatus, case_id))
 
+    # 2. Delete that exact history row safely (using a subquery because PostgreSQL needs it)
     c.execute("""
         DELETE FROM case_status_history
         WHERE ctid = (
@@ -312,11 +302,14 @@ def undo_status(case_id):
 
     db.commit()
     flash("Status successfully undone", "success")
+
     return redirect(url_for('case.dashboard', case_id=case_id))
 
 
+
+
 # ----------------------------------------------------------------------
-#  MAIN DASHBOARD
+#  MAIN DASHBOARD - THE BIG ONE
 # ----------------------------------------------------------------------
 @case_bp.route('/')
 @case_bp.route('/dashboard')
@@ -325,9 +318,11 @@ def dashboard():
     db = get_db()
     c = db.cursor()
 
+    # All clients for the sidebar
     c.execute("SELECT id, business_name FROM clients ORDER BY business_name")
     clients = c.fetchall()
 
+    # Recent cases for the "no case selected" view
     c.execute("""
         SELECT c.id as client_id, c.business_name, s.id as case_id,
                COALESCE(s.debtor_business_name, s.debtor_first || ' ' || s.debtor_last) as debtor,
@@ -339,6 +334,7 @@ def dashboard():
     """)
     recent_cases = c.fetchall()
 
+    # Selected case logic
     selected_case = None
     case_client = None
     client_cases = []
@@ -363,11 +359,13 @@ def dashboard():
             c.execute("SELECT * FROM clients WHERE id = %s", (selected_case['client_id'],))
             case_client = c.fetchone()
 
+            # Load all cases for this client + calculate balance for switcher
             c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = %s ORDER BY id", (selected_case['client_id'],))
             client_cases_raw = c.fetchall()
             client_cases = []
             for case in client_cases_raw:
                 case_dict = dict(case)
+                # Calculate balance exactly like you do for the main case
                 c.execute("SELECT type, amount, recoverable FROM money WHERE case_id = %s", (case['id'],))
                 money_rows = c.fetchall()
                 case_balance = 0.0
