@@ -968,8 +968,30 @@ function openEditTransactionModal(id) {
     });
   </script>
 
+
+<div id="renameModal" class="modal">
+  <div class="modal-content" style="width:400px;">
+    <span class="close" onclick="closeModal('renameModal')">&times;</span>
+    <h3 id="renameTitle">Rename</h3>
+    <form id="renameForm" method="post">
+      <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+      <input type="hidden" name="target_id" id="renameTargetId">
+      
+      <div style="margin-bottom:15px;">
+        <label id="renameLabel" style="display:block; margin-bottom:5px; font-weight:bold;">New Name:</label>
+        <input type="text" name="new_name" id="renameInput" required style="width:100%; height:32px; padding:0 8px;">
+      </div>
+      
+      <button type="submit" class="btn" style="width:100%;">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+
+  
 </body>
 </html>
+
 
 
 
