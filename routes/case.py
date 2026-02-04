@@ -467,8 +467,6 @@ def dashboard():
 
     today_str = date.today().isoformat()
 
-today_str = date.today().isoformat()
-
     return render_template('dashboard.html',
                            clients=clients,
                            recent_cases=recent_cases,
