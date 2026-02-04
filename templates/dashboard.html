@@ -567,7 +567,7 @@ th { background:#f5f5f5; }
 {% if selected_case %}
 <h3 style="margin-top:20px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Custom Fields</h3>
 <div class="info-box" style="background:#fff; border:1px solid #eaeaea; margin:0 15px 20px 15px; padding:15px;">
-    <form action="{{ url_for('case.update_custom_fields') }}" method="post">
+    <form action="{{ url_for('case.update_custom_field') }}" method="post">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
         
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
@@ -577,7 +577,7 @@ th { background:#f5f5f5; }
                     <label style="font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 4px;">
                         {{ field.field_name }}
                     </label>
-                    <input type="{{ field.field_type }}" 
+                    <input type="{{ field.field_type if field.field_type else 'text' }}" 
                            name="custom_field_{{ field.field_id }}" 
                            value="{{ field.field_value or '' }}"
                            style="border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px; width: 100%; box-sizing: border-box;">
@@ -589,6 +589,17 @@ th { background:#f5f5f5; }
                 </p>
             {% endif %}
         </div>
+
+        {% if custom_fields %}
+        <div style="margin-top: 15px; text-align: right;">
+            <button type="submit" class="btn btn-sm btn-primary" style="background-color: #f06422; border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                Save Custom Fields
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endif %}
 
 {% if custom_fields %}
         <div style="margin-top: 15px; text-align: right;">
@@ -1060,6 +1071,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
