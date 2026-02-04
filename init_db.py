@@ -5,7 +5,7 @@ def init_db(DATABASE_URL):
     conn = psycopg.connect(DATABASE_URL)
     c = conn.cursor()
 
-    # --- TABLE CREATION ---
+    # --- EXISTING TABLES (Preserved with IF NOT EXISTS) ---
     c.execute("""
     CREATE TABLE IF NOT EXISTS clients (
         id SERIAL PRIMARY KEY,
@@ -58,7 +58,7 @@ def init_db(DATABASE_URL):
         vat_amount REAL DEFAULT 0.0,
         billed INTEGER DEFAULT 0,
         billeddate DATE,
-        charge_id INTEGER REFERENCES charges(id)
+        charge_id INTEGER
     )
     """)
     c.execute("""
@@ -90,7 +90,8 @@ def init_db(DATABASE_URL):
         new_status TEXT,
         new_substatus TEXT,
         changed_by INTEGER NOT NULL REFERENCES users(id),
-        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        old_next_action_date DATE
     )
     """)
     c.execute("""
@@ -107,25 +108,50 @@ def init_db(DATABASE_URL):
     )
     """)
 
-    # --- SAFE MIGRATIONS / RENAME / ADD FIELDS ---
-    # rename note -> description only if old column exists
+    # --- NEW CUSTOM FIELDS TABLES ---
+    
+    # 1. Master list of available custom field types
     c.execute("""
-        SELECT 1
-        FROM information_schema.columns
+    CREATE TABLE IF NOT EXISTS custom_field_definitions (
+        id SERIAL PRIMARY KEY,
+        field_name TEXT NOT NULL UNIQUE,
+        field_type TEXT DEFAULT 'text' -- e.g., 'text', 'date', 'number'
+    )
+    """)
+
+    # 2. Link table: which clients use which custom fields?
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS client_custom_field_link (
+        client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+        field_id INTEGER REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+        PRIMARY KEY (client_id, field_id)
+    )
+    """)
+
+    # 3. Data table: the actual values for a specific case
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS case_custom_values (
+        case_id INTEGER REFERENCES cases(id) ON DELETE CASCADE,
+        field_id INTEGER REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+        field_value TEXT,
+        PRIMARY KEY (case_id, field_id)
+    )
+    """)
+
+    # --- SAFE MIGRATIONS (Column checking) ---
+    c.execute("""
+        SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'money' AND column_name = 'note'
     """)
     if c.fetchone():
         c.execute("ALTER TABLE money RENAME COLUMN note TO description")
-    # existing safe adds
+
+    # Add missing columns to existing tables if they don't exist
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS vat_amount REAL DEFAULT 0.0")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS billed INTEGER DEFAULT 0")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS billeddate DATE")
     c.execute("ALTER TABLE money ADD COLUMN IF NOT EXISTS charge_id INTEGER REFERENCES charges(id)")
-
-    # NEW: store old next_action_date when undoing status changes
     c.execute("ALTER TABLE case_status_history ADD COLUMN IF NOT EXISTS old_next_action_date DATE")
 
     conn.commit()
     conn.close()
-
-
