@@ -438,7 +438,7 @@ th { background:#f5f5f5; }
 
   <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
     <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Debtor</div>
-    <div style="font-size:18px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+    <div style="font-size:15px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
       {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}
       <a href="javascript:void(0)" onclick="openRenameModal('debtor')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
     </div>
@@ -458,7 +458,7 @@ th { background:#f5f5f5; }
     
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
       <div>
-        <div style="font-size:18px; font-weight:600; display:flex; align-items:center; gap:8px;">
+        <div style="font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
             {{ case_client.business_name }}
             <a href="javascript:void(0)" onclick="openRenameModal('client')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
         </div>
@@ -1054,4 +1054,5 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
