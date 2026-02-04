@@ -563,6 +563,44 @@ th { background:#f5f5f5; }
 
 {% if selected_case %}
       <div class="section" style="display:flex; flex-direction:column; height:100%; border-bottom: none; padding: 0 0 15px 0;">
+
+{% if selected_case %}
+<h3 style="margin-top:20px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Custom Fields</h3>
+<div class="info-box" style="background:#fff; border:1px solid #eaeaea; margin:0 15px 20px 15px; padding:15px;">
+    <form action="{{ url_for('case.update_custom_fields') }}" method="post">
+        <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+        
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+            {% if custom_fields %}
+                {% for field in custom_fields %}
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 4px;">
+                        {{ field.field_name }}
+                    </label>
+                    <input type="{{ field.field_type }}" 
+                           name="custom_field_{{ field.field_id }}" 
+                           value="{{ field.field_value or '' }}"
+                           style="border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #999; font-style: italic; font-size: 12px; grid-column: 1 / 5; text-align: center;">
+                    No custom fields have been enabled for this client.
+                </p>
+            {% endif %}
+        </div>
+
+        {% if custom_fields %}
+        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; text-align: right;">
+            <button type="submit" class="btn" style="height: 32px; padding: 0 25px;">Save Custom Fields</button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endif %}
+
+
+        
         <h3 style="margin-left: 15px; margin-top: 29px;">Notes</h3>
         <div class="add-bar-container" style="position: static; border-top: none; padding: 0 15px 15px 15px; margin-top: 0;">
           <form class="add-bar notes-add-bar" action="/add_note" method="post">
@@ -1012,6 +1050,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
