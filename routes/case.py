@@ -5,9 +5,7 @@
 #  • Edit / delete transaction & note
 #  • Update case status
 #  • Search (cases & clients)
-#  • The get_transaction endpoint for the edit modal
-#  THIS FILE IS DELIBERATELY HUGE BECAUSE IT'S THE MAIN WORKFLOW
-#  Future dev: if you want to split this further later, go for it. For now it's all here and clearly labelled.
+#  • Custom Field Updates (NEW)
 # =============================================================================
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
@@ -16,7 +14,6 @@ from extensions import get_db
 from datetime import date
 
 case_bp = Blueprint('case', __name__)
-
 
 # ----------------------------------------------------------------------
 #  SEARCH - global search box + client autocomplete
@@ -223,7 +220,7 @@ def update_case_status():
     case_id = request.form['case_id']
     new_status = request.form['status']
     new_substatus = request.form.get('substatus') or None
-    new_next_action_date = request.form.get('next_action_date') or None   # <-- NEW
+    new_next_action_date = request.form.get('next_action_date') or None
 
     db = get_db()
     c = db.cursor()
@@ -277,18 +274,18 @@ def undo_status(case_id):
         return redirect(url_for('case.dashboard', case_id=case_id))
 
     old_status = last['old_status']
-    old_substatus = last['old_substatus']  # can be NULL
+    old_substatus = last['old_substatus']
 
     # 1. Revert the case status
     c.execute("""
         UPDATE cases
         SET status = %s,
             substatus = %s,
-            next_action_date = NULL   -- clears the date when undoing (most users prefer this)
+            next_action_date = NULL
         WHERE id = %s
     """, (old_status, old_substatus, case_id))
 
-    # 2. Delete that exact history row safely (using a subquery because PostgreSQL needs it)
+    # 2. Delete that exact history row safely
     c.execute("""
         DELETE FROM case_status_history
         WHERE ctid = (
@@ -318,6 +315,32 @@ def rename_debtor():
     return redirect(url_for('case.dashboard', case_id=case_id))
 
 
+# ----------------------------------------------------------------------
+# NEW: CUSTOM FIELD UPDATES
+# ----------------------------------------------------------------------
+@case_bp.route('/update_custom_fields', methods=['POST'])
+@login_required
+def update_custom_fields():
+    db = get_db()
+    c = db.cursor()
+    case_id = request.form.get('case_id')
+    
+    # Iterate through all form items to find custom field inputs
+    for key, value in request.form.items():
+        if key.startswith('custom_field_'):
+            field_id = key.replace('custom_field_', '')
+            
+            # Upsert logic: Delete existing and re-insert if value is present
+            c.execute("DELETE FROM case_custom_values WHERE case_id = %s AND field_id = %s", (case_id, field_id))
+            if value.strip():
+                c.execute("""
+                    INSERT INTO case_custom_values (case_id, field_id, field_value)
+                    VALUES (%s, %s, %s)
+                """, (case_id, field_id, value))
+    
+    db.commit()
+    flash("Custom fields updated")
+    return redirect(url_for('case.dashboard', case_id=case_id))
 
 
 # ----------------------------------------------------------------------
@@ -334,7 +357,7 @@ def dashboard():
     c.execute("SELECT id, business_name FROM clients ORDER BY business_name")
     clients = c.fetchall()
 
-    # Recent cases for the "no case selected" view
+    # Recent cases
     c.execute("""
         SELECT c.id as client_id, c.business_name, s.id as case_id,
                COALESCE(s.debtor_business_name, s.debtor_first || ' ' || s.debtor_last) as debtor,
@@ -346,13 +369,13 @@ def dashboard():
     """)
     recent_cases = c.fetchall()
 
-    # Selected case logic
     selected_case = None
     case_client = None
     client_cases = []
     notes = []
     transactions = []
     status_history = []
+    custom_fields = [] # NEW
     balance = 0.0
     totals = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
     page = int(request.args.get('page', 1))
@@ -371,13 +394,27 @@ def dashboard():
             c.execute("SELECT * FROM clients WHERE id = %s", (selected_case['client_id'],))
             case_client = c.fetchone()
 
-            # Load all cases for this client + calculate balance for switcher
+            # --- NEW: Fetch Custom Fields & Values ---
+            c.execute("""
+                SELECT 
+                    fd.id as field_id, 
+                    fd.field_name, 
+                    fd.field_type,
+                    cv.field_value
+                FROM client_custom_field_link link
+                JOIN custom_field_definitions fd ON link.field_id = fd.id
+                LEFT JOIN case_custom_values cv ON (cv.field_id = fd.id AND cv.case_id = %s)
+                WHERE link.client_id = %s
+                ORDER BY fd.field_name
+            """, (case_id, selected_case['client_id']))
+            custom_fields = c.fetchall()
+
+            # Load all cases for this client
             c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = %s ORDER BY id", (selected_case['client_id'],))
             client_cases_raw = c.fetchall()
             client_cases = []
             for case in client_cases_raw:
                 case_dict = dict(case)
-                # Calculate balance exactly like you do for the main case
                 c.execute("SELECT type, amount, recoverable FROM money WHERE case_id = %s", (case['id'],))
                 money_rows = c.fetchall()
                 case_balance = 0.0
@@ -434,6 +471,7 @@ def dashboard():
                            notes=notes,
                            transactions=transactions,
                            status_history=status_history,
+                           custom_fields=custom_fields,
                            balance=round(balance, 2),
                            totals={k: round(v, 2) for k, v in totals.items()},
                            today_str=today_str,
