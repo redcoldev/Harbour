@@ -409,6 +409,11 @@ def dashboard():
             """, (case_id, selected_case['client_id']))
             custom_fields = c.fetchall()
 
+
+
+
+
+            
             # Load all cases for this client
             c.execute("SELECT id, debtor_business_name, debtor_first, debtor_last FROM cases WHERE client_id = %s ORDER BY id", (selected_case['client_id'],))
             client_cases_raw = c.fetchall()
@@ -462,28 +467,8 @@ def dashboard():
 
     today_str = date.today().isoformat()
 
+today_str = date.today().isoformat()
 
-@case_bp.route('/update_custom_field', methods=['POST'])
-@login_required
-def update_custom_field():
-    case_id = request.form.get('case_id')
-    field_id = request.form.get('field_id')
-    field_value = request.form.get('field_value')
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("""
-        INSERT INTO case_custom_values (case_id, field_id, field_value)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (case_id, field_id) 
-        DO UPDATE SET field_value = EXCLUDED.field_value
-    """, (case_id, field_id, field_value))
-    
-    db.commit()
-    return redirect(url_for('case.dashboard', case_id=case_id))
-
-    
     return render_template('dashboard.html',
                            clients=clients,
                            recent_cases=recent_cases,
@@ -498,3 +483,23 @@ def update_custom_field():
                            totals={k: round(v, 2) for k, v in totals.items()},
                            today_str=today_str,
                            page=page)
+
+@case_bp.route('/update_custom_field', methods=['POST'])
+@login_required
+def update_custom_field():
+    case_id = request.form.get('case_id')
+    db = get_db()
+    c = db.cursor()
+
+    for key, value in request.form.items():
+        if key.startswith('custom_field_'):
+            field_id = key.replace('custom_field_', '')
+            c.execute("""
+                INSERT INTO case_custom_values (case_id, field_id, field_value)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (case_id, field_id) 
+                DO UPDATE SET field_value = EXCLUDED.field_value
+            """, (case_id, field_id, value))
+    
+    db.commit()
+    return redirect(url_for('case.dashboard', case_id=case_id))
