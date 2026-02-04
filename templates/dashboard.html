@@ -734,7 +734,7 @@ th { background:#f5f5f5; }
           <tbody>
             {% for c in recent_cases %}
             <tr>
-              <td><a href="/client/{{ c.client_id }}">{{ c.business_name }}</a></td>
+             <td><a href="/client/{{ c.client_id }}/cases">{{ c.business_name }}</a></td>
               <td><a href="/dashboard?case_id={{ c.case_id }}">{{ c.debtor }}</a></td>
               <td>{{ c.open_date|format_date }}</td>
             </tr>
@@ -1012,6 +1012,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
