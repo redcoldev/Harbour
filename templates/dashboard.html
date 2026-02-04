@@ -606,14 +606,14 @@ th { background:#f5f5f5; }
     href="javascript:void(0)" 
     class="flat-action"
     onclick="editNote({{ n.id }}, '{{ n.type|e }}', '{{ n.note|e }}')"
-  >edit</a>
+  >✏️</a>
 
   <span style="color:#ccc;">|</span>
 
   <a 
     href="javascript:deleteNote({{ n.id }})" 
     class="flat-action flat-del"
-  >del</a>
+  >❌</a>
 </td>
 
 
@@ -1012,6 +1012,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
