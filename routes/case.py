@@ -185,9 +185,12 @@ def edit_transaction():
 def delete_transaction(trans_id):
     db = get_db()
     c = db.cursor()
+    c.execute("SELECT case_id FROM money WHERE id = %s", (trans_id,))
+    res = c.fetchone()
+    case_id = res['case_id'] if res else None
     c.execute("DELETE FROM money WHERE id = %s", (trans_id,))
     db.commit()
-    return '', 204
+    return redirect(url_for('case.dashboard', case_id=case_id))
 
 
 @case_bp.route('/edit_note', methods=['POST'])
@@ -206,9 +209,12 @@ def edit_note():
 def delete_note(note_id):
     db = get_db()
     c = db.cursor()
+    c.execute("SELECT case_id FROM notes WHERE id = %s", (note_id,))
+    res = c.fetchone()
+    case_id = res['case_id'] if res else None
     c.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     db.commit()
-    return '', 204
+    return redirect(url_for('case.dashboard', case_id=case_id))
 
 
 # ----------------------------------------------------------------------
@@ -482,22 +488,4 @@ def dashboard():
                            today_str=today_str,
                            page=page)
 
-@case_bp.route('/update_custom_field', methods=['POST'])
-@login_required
-def update_custom_field():
-    case_id = request.form.get('case_id')
-    db = get_db()
-    c = db.cursor()
 
-    for key, value in request.form.items():
-        if key.startswith('custom_field_'):
-            field_id = key.replace('custom_field_', '')
-            c.execute("""
-                INSERT INTO case_custom_values (case_id, field_id, field_value)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (case_id, field_id) 
-                DO UPDATE SET field_value = EXCLUDED.field_value
-            """, (case_id, field_id, value))
-    
-    db.commit()
-    return redirect(url_for('case.dashboard', case_id=case_id))
