@@ -5,6 +5,11 @@ from extensions import get_db
 from datetime import date
 import json
 
+@case_bp.route('/test')
+def test():
+    return "TEST PAGE WORKS"
+
+
 case_bp = Blueprint('case', __name__)
 
 # ────────────────────────────────────────────────
