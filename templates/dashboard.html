@@ -931,9 +931,12 @@ th { background:#f5f5f5; }
     }
     
     // Transaction Logic
-    document.getElementById('transType').addEventListener('change', function() {
+    const transType = document.getElementById('transType');
+    if (transType) {
+      transType.addEventListener('change', function() {
         document.getElementById('chargeOpts').style.display = (this.value === 'Charge' ? 'grid' : 'none');
-    });
+      });
+    }
 
     // NOTE EDIT FUNCTION (FIXED)
     function editNote(id, type, note) {
@@ -969,29 +972,29 @@ function openEditTransactionModal(id) {
 
 
 
-// NEW RENAME LOGIC
-function openRenameModal(type) {␊
-    const title = document.getElementById('renameTitle');␊
-    const label = document.getElementById('renameLabel');␊
-    const input = document.getElementById('renameInput');␊
-    const form = document.getElementById('renameForm');␊
-    const targetIdField = document.getElementById('renameTargetId');␊
-
-    if (type === 'debtor') {
-        title.innerText = "Rename Debtor";
-        label.innerText = "New Debtor Business Name:";
-        input.value = "{{ selected_case.debtor_business_name or '' }}";
-        targetIdField.value = "{{ selected_case.id if selected_case else '' }}";
-        form.action = "{{ url_for('case.rename_debtor') }}";
-    } else {
-        title.innerText = "Rename Client";
-        label.innerText = "New Client Business Name:";
-        input.value = "{{ case_client.business_name if case_client else '' }}";
-        targetIdField.value = "{{ case_client.id if case_client else '' }}";
-        form.action = "{{ url_for('client.rename_client') }}";
-    }
-    openModal('renameModal');
-}
+// NEW RENAME LOGIC␊
+function openRenameModal(type) {
+    const title = document.getElementById('renameTitle');
+    const label = document.getElementById('renameLabel');
+    const input = document.getElementById('renameInput');
+    const form = document.getElementById('renameForm');
+    const targetIdField = document.getElementById('renameTargetId');
+␊
+    if (type === 'debtor') {␊
+        title.innerText = "Rename Debtor";␊
+        label.innerText = "New Debtor Business Name:";␊
+        input.value = "{{ selected_case.debtor_business_name or '' }}";␊
+        targetIdField.value = "{{ selected_case.id if selected_case else '' }}";␊
+        form.action = "{{ url_for('case.rename_debtor') }}";␊
+    } else {␊
+        title.innerText = "Rename Client";␊
+        label.innerText = "New Client Business Name:";␊
+        input.value = "{{ case_client.business_name if case_client else '' }}";␊
+        targetIdField.value = "{{ case_client.id if case_client else '' }}";␊
+        form.action = "{{ url_for('client.rename_client') }}";␊
+    }␊
+    openModal('renameModal');␊
+}␊
 
 // CUSTOM FIELDS EDIT TOGGLE
 const customFieldsToggle = document.getElementById('customFieldsToggle');
@@ -1035,9 +1038,12 @@ function deleteTransaction(id) {
   }
 }
 
-document.getElementById('apiModal').addEventListener('transitionend', function() {
-  if (this.classList.contains('active')) loadApiKeys();
-});
+const apiModal = document.getElementById('apiModal');
+if (apiModal) {
+  apiModal.addEventListener('transitionend', function() {
+    if (this.classList.contains('active')) loadApiKeys();
+  });
+}
 
 // Global error handler
 window.addEventListener('error', function(e) {
@@ -1080,6 +1086,7 @@ window.addEventListener('error', function(e) {
   
 </body>
 </html>
+
 
 
 
