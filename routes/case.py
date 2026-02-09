@@ -152,9 +152,15 @@ def get_transaction(trans_id):
     trans = c.fetchone()
     if not trans:
         return jsonify({}), 404
-    data = dict(trans)
-    data['note'] = data.get('description') or ''  # backward compat for JS
-    return jsonify(data)
+return jsonify({
+        'id': trans['id'],
+        'amount': float(trans['amount']),
+        'description': trans['description'] or '',
+        'type': trans['type'],
+        'recoverable': bool(trans['recoverable']),
+        'billable': bool(trans['billable']),
+        'note': trans['description'] or ''
+    })
 
 
 @case_bp.route('/edit_transaction', methods=['POST'])
