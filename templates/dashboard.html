@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,495 +8,603 @@
   <link rel="icon" href="/static/favicon.png" type="image/png">
 
   <style>
-    .client-logo-dashboard {
-      height: 40px;
-      width: auto;
-      max-width: 120px;
-      object-fit: contain;
-      margin-top: 4px;
-      align-self: flex-start;
-    }
 
-    /* FLAT TEXT LINKS */
-    .flat-action {
-      color: rgb(227,82,5) !important;
-      font-size: 11px !important;
-      font-weight: 600;
-      text-decoration: none;
-      padding: 0 4px;
-    }
-    .flat-action:hover { text-decoration: underline !important; }
-    .flat-del { color: #c0392b !important; }
 
-    /* ULTRA-COMPACT ROWS */
-    .notes-scroll table,
-    .transactions-scroll table {
-      font-size: 11px !important;
-      line-height: 1 !important;
-    }
-    .notes-scroll th, .notes-scroll td,
-    .transactions-scroll th, .transactions-scroll td {
-      padding: 1px 4px !important;
-      height: auto !important;
-    }
+.client-logo-dashboard {
+    height: 40px; /* Decreased size */
+    width: auto;
+    max-width: 120px; /* Reduced max-width to keep it proportional */
+    object-fit: contain;
+    margin-top: 4px;
+    align-self: flex-start;
+}
 
-    /* R/B COLUMNS */
-    .trans-rb {
-      width: 28px !important;
-      text-align: center;
-    }
 
-    /* ACTION BUTTONS */
-    .actions-horizontal {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-    }
-    .btn-small {
-      padding: 1px 6px !important;
-      font-size: 10.5px !important;
-      height: 20px;
-      min-width: 34px;
-    }
 
-    /* PAGE BASE */
-    body {
-      margin:0;
-      font-family: Arial;
-      background:#f9f9f9;
-      font-size: calc(12px + 0.1vw);
-    }
-    h1,h2,h3,h4,h5,h6 {
-      font-size:1.4em;
-      margin:0 0 8px;
-      color:#333;
-      font-weight:bold;
-    }
 
-    /* HEADER */
-    .header {
-      height:80px;
-      background:rgb(162,170,173);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 30px;
-      box-shadow:0 2px 5px rgba(0,0,0,0.1);
-    }
-    .header img { height:45px; }
-    .header .btn-group { display:flex; gap:10px; }
-    .btn {
-      background:rgb(227,82,5);
-      color:white;
-      border:none;
-      padding:8px 14px;
-      border-radius:5px;
-      cursor:pointer;
-      font-weight:bold;
-      font-size:12px;
-    }
+    
+/* FLAT TEXT LINKS */
+.flat-action {
+    color: rgb(227,82,5) !important;
+    font-size: 11px !important;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0 4px;
+}
+.flat-action:hover { text-decoration: underline !important; }
+.flat-del { color: #c0392b !important; }
 
-    /* MAIN LAYOUT */
-    .container { 
-      display:flex; 
-      height:calc(100vh - 80px); 
-      min-width: 1000px;
-    }
-    .left { 
-      width: calc(55% + 5vw); 
-      display:flex; 
-      flex-direction:column; 
-    }
-    .right {
-      width: calc(45% - 5vw); 
-      background:#fff;
-      border-left:1px solid #ddd;
-      padding:15px;
-      display:flex;
-      flex-direction:column;
-      max-width: 1800px; 
-    }
+/* ULTRA-COMPACT ROWS */
+.notes-scroll table,
+.transactions-scroll table {
+    font-size: 11px !important;
+    line-height: 1 !important;
+}
+.notes-scroll th, .notes-scroll td,
+.transactions-scroll th, .transactions-scroll td {
+    padding: 1px 4px !important;
+    height: auto !important;
+}
 
-    /* INFO BOX */
-    .info-box {
-      background:#eef5ff;
-      padding:10px 18px;
-      border-radius:8px;
-      margin:10px 15px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.1);
-    }
-    .info-box p { margin:2px 0; }
-    .info-box a {
-      color:rgb(227,82,5)!important;
-      text-decoration:none;
-    }
-    .info-box a:hover { text-decoration:underline; }
+/* R/B COLUMNS */
+.trans-rb {
+    width: 28px !important;
+    text-align: center;
+}
 
-    /* SECTIONS */
-    .section {
-      padding:15px;
-      border-bottom:1px solid #eee;
-      display:flex;
-      flex-direction:column;
-      height:100%;
-    }
+/* ACTION BUTTONS */
+.actions-horizontal {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+.btn-small {
+    padding: 1px 6px !important;
+    font-size: 10.5px !important;
+    height: 20px;
+    min-width: 34px;
+}
 
-    /* TABLES */
-    table { width:100%; border-collapse:collapse; }
-    th,td {
-      padding:3px 6px;
-      text-align:left;
-      border-bottom:1px solid #eee;
-      font-size:12px;
-    }
-    th { background:#f5f5f5; }
+/* PAGE BASE - REDUCED FONT SIZE & 4K SCALING */
+body {
+    margin:0;
+    font-family: Arial;
+    background:#f9f9f9;
+    /* BASE 12px for 1080p, scaling up slightly for 4K */
+    font-size: calc(12px + 0.1vw);
+}
+h1,h2,h3,h4,h5,h6 {
+    font-size:1.4em;
+    margin:0 0 8px;
+    color:#333;
+    font-weight:bold;
+}
 
-    .note-actions, .trans-actions {
-      width: 110px !important;
-      min-width: 110px !important;
-      text-align: center;
-      white-space: nowrap;
-    }
+/* HEADER */
+.header {
+    height:80px;
+    background:rgb(162,170,173);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 30px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+.header img { height:45px; }
+.header .btn-group { display:flex; gap:10px; }
+.btn {
+    background:rgb(227,82,5);
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:12px;
+}
 
-    .trans-note { white-space:normal; word-wrap:break-word; }
-    .note-text, .trans-note { font-size:12px; line-height:1.3; }
+/* MAIN LAYOUT - 4K RESPONSIVE SCALING */
+.container { 
+    display:flex; 
+    height:calc(100vh - 80px); 
+    /* Prevent squishing on small screens */
+    min-width: 1000px;
+}
+.left { 
+    /* Base 60% with 5vw scaling for 4K */
+    width: calc(55% + 5vw); 
+    display:flex; 
+    flex-direction:column; 
+}
+.right {
+    /* Remaining width, scaling down from 40% with 5vw scaling */
+    width: calc(45% - 5vw); 
+    background:#fff;
+    border-left:1px solid #ddd;
+    padding:15px;
+    display:flex;
+    flex-direction:column;
+    /* Don't let the right panel get absurdly wide on huge monitors */
+    max-width: 1800px; 
+}
 
-    .note-date,.note-type,.note-user {
-      width:12%;
-      font-size:0.85em;
-      color:#555;
-    }
-    .note-text { width:64%; }
+/* INFO BOX - TIGHTER PADDING/MARGIN */
+.info-box {
+    background:#eef5ff;
+    padding:10px 18px;
+    border-radius:8px;
+    margin:10px 15px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+.info-box p { margin:2px 0; }
+.info-box a {
+    color:rgb(227,82,5)!important;
+    text-decoration:none;
+}
+.info-box a:hover { text-decoration:underline; }
 
-    /* SEARCH */
-    .search-form {
-      display:flex;
-      gap:8px;
-      margin-bottom:15px;
-      align-items:center;
-    }
-    .search-form input {
-      padding:8px;
-      border:1px solid #ccc;
-      border-radius:4px;
-      font-size:12px;
-      flex:1;
-    }
+/* SECTIONS */
+.section {
+    padding:15px;
+    border-bottom:1px solid #eee;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+}
 
-    /* SCROLL AREAS */
-    .notes-scroll, .transactions-scroll {
-      flex:1;
-      overflow-y:auto;
-      border:1px solid #eee;
-      border-radius:4px;
-      padding:8px;
-      background:#fff;
-      margin-top:10px;
-    }
+/* TABLES - REDUCED PADDING/FONT */
+table { width:100%; border-collapse:collapse; }
+th,td {
+    padding:3px 6px;
+    text-align:left;
+    border-bottom:1px solid #eee;
+    font-size:12px;
+}
+th { background:#f5f5f5; }
 
-    /* TOTALS */
-    .totals {
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-      margin-top:10px;
-    }
-    .total-box {
-      background:#eef;
-      padding:8px;
-      border-radius:5px;
-      text-align:center;
-      font-weight:bold;
-      font-size:12px;
-    }
-    .balance {
-      font-weight:bold;
-      font-size:1.1em;
-      color:#d00;
-      margin-top:10px;
-    }
+/* NOTE/TXN ACTION WIDTHS */
+.note-actions, .trans-actions {
+    width: 110px !important;
+    min-width: 110px !important;
+    text-align: center;
+    white-space: nowrap;
+}
 
-    /* ADD BAR */
-    .add-bar-container {
-      position:sticky;
-      bottom:0;
-      background:#f8f9fa;
-      border-top:1px solid #ddd;
-      padding:8px 15px;
-    }
-    .add-bar {
-      display:grid;
-      grid-template-columns:1fr 1fr 1fr 2fr auto;
-      gap:8px;
-      align-items:center;
-    }
-    .add-bar select,
-    .add-bar input,
-    .add-bar textarea,
-    .add-bar button {
-      height:32px;
-      padding:0 8px;
-      border:1px solid #ccc;
-      border-radius:4px;
-      font-size:12px;
-    }
-    .add-bar button {
-      background:rgb(227,82,5);
-      color:white;
-      font-weight:bold;
-    }
+/* TIGHTER ROWS */
+.trans-note { white-space:normal; word-wrap:break-word; }
+.note-text, .trans-note { font-size:12px; line-height:1.3; }
 
-    .notes-add-bar { grid-template-columns:7.5rem 1fr 4rem!important; }
-    .notes-add-bar button { width:4rem!important; height:32px; }
+.note-date,.note-type,.note-user {
+    width:12%;
+    font-size:0.85em;
+    color:#555;
+}
+.note-text { width:64%; }
 
-    .grey-charge td { color:#999!important; }
+/* SEARCH BOXES */
+.search-form {
+    display:flex;
+    gap:8px;
+    margin-bottom:15px;
+    align-items:center;
+}
+.search-form input {
+    padding:8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:12px;
+    flex:1;
+}
 
-    /* CLIENT SEARCH */
-    .client-search-form {
-      display:flex;
-      gap:8px;
-      margin-bottom:8px;
-      align-items:center;
-    }
-    .client-results {
-      max-height:120px;
-      overflow-y:auto;
-      border:1px solid #ddd;
-      background:white;
-      margin-bottom:8px;
-    }
-    .client-result { padding:6px; cursor:pointer; border-bottom:1px solid #eee; }
-    .client-result:hover { background:#f0f0f0; }
-    #selectedClient { margin-bottom:8px; font-weight:bold; color:#333; font-size:12px; }
+/* SCROLL AREAS */
+.notes-scroll, .transactions-scroll {
+    flex:1;
+    overflow-y:auto;
+    border:1px solid #eee;
+    border-radius:4px;
+    padding:8px;
+    background:#fff;
+    margin-top:10px;
+}
 
-    /* MODALS */
-    .modal {
-      display:none;
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      background:rgba(0,0,0,0.5);
-      justify-content:center;
-      align-items:center;
-      z-index:1000;
-      pointer-events: none;
-    }
-    .modal.active { 
-      display:flex; 
-      pointer-events: auto;
-    }
-    .modal-content {
-      background:white;
-      padding:15px;
-      border-radius:8px;
-      width:480px;
-      max-height:85vh;
-      overflow-y:auto;
-      box-shadow:0 4px 12px rgba(0,0,0,0.2);
-      font-size:12px;
-    }
-    .close {
-      float:right;
-      font-size:1.6em;
-      cursor:pointer;
-      color:#999;
-    }
-    .close:hover { color:#000; }
+/* TOTALS */
+.totals {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:10px;
+}
+.total-box {
+    background:#eef;
+    padding:8px;
+    border-radius:5px;
+    text-align:center;
+    font-weight:bold;
+    font-size:12px;
+}
+.balance {
+    font-weight:bold;
+    font-size:1.1em;
+    color:#d00;
+    margin-top:10px;
+}
 
-    .left .section {
-      height: auto !important;
-    }
+/* ADD-BAR - REDUCED HEIGHT/PADDING */
+.add-bar-container {
+    position:sticky;
+    bottom:0;
+    background:#f8f9fa;
+    border-top:1px solid #ddd;
+    padding:8px 15px;
+}
+.add-bar {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 2fr auto;
+    gap:8px;
+    align-items:center;
+}
+.add-bar select,
+.add-bar input,
+.add-bar textarea,
+.add-bar button {
+    /* REDUCED HEIGHT */
+    height:32px;
+    padding:0 8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:12px;
+}
+.add-bar button {
+    background:rgb(227,82,5);
+    color:white;
+    font-weight:bold;
+}
 
-    /* Dropdown */
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-    .dropdown-btn {
-      font-weight: bold;
-    }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 160px;
-      box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
-      z-index: 2000;
-      border-radius: 6px;
-    }
-    .dropdown-content a {
-      color: #333;
-      padding: 10px 14px;
-      text-decoration: none;
-      display: block;
-      font-size: 12px;
-    }
-    .dropdown-content a:hover {
-      background-color: #f0f0f0;
-    }
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
+/* NOTES BAR */
+.notes-add-bar { grid-template-columns:7.5rem 1fr 4rem!important; }
+.notes-add-bar button { width:4rem!important; height:32px; }
+
+/* GREYED CHARGES */
+.grey-charge td { color:#999!important; }
+
+/* CLIENT SEARCH */
+.client-search-form {
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+    align-items:center;
+}
+.client-results {
+    max-height:120px;
+    overflow-y:auto;
+    border:1px solid #ddd;
+    background:white;
+    margin-bottom:8px;
+}
+.client-result { padding:6px; cursor:pointer; border-bottom:1px solid #eee; }
+.client-result:hover { background:#f0f0f0; }
+#selectedClient { margin-bottom:8px; font-weight:bold; color:#333; font-size:12px; }
+
+/* MODALS */
+.modal {
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+    z-index:1000;
+    pointer-events: none; /* Crucial for background interaction */
+}
+.modal.active { 
+    display:flex; 
+    pointer-events: auto;
+}
+.modal-content {
+    background:white;
+    padding:15px;
+    border-radius:8px;
+    width:480px;
+    max-height:85vh;
+    overflow-y:auto;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    font-size:12px;
+}
+.close {
+    float:right;
+    font-size:1.6em;
+    cursor:pointer;
+    color:#999;
+}
+.close:hover { color:#000; }
+
+/* Prevent top 2x2 info grid from being squeezed */
+.left .section {
+    height: auto !important;
+}
+
+    
   </style>
+
+    <style>
+
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-btn {
+    font-weight: bold;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 160px;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+    z-index: 2000;
+    border-radius: 6px;
+}
+
+.dropdown-content a {
+    color: #333;
+    padding: 10px 14px;
+    text-decoration: none;
+    display: block;
+    font-size: 12px;
+}
+
+.dropdown-content a:hover {
+    background-color: #f0f0f0;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+
+  </style>
+
+
+
+
+
+
+  
 </head>
 <body>
 
   <div class="header">
-    <a href="{{ url_for('case.dashboard') }}">
-      <img src="/static/helm-logo.png" alt="Helm" style="height:45px;">
-    </a>
     
-    <div class="btn-group">
-      <button class="btn" onclick="location.href='{{ url_for('case.dashboard') }}'">Home</button>
-      <button class="btn" onclick="openModal('clientModal')">+ Add Client</button>
-      <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
-      <button class="btn" onclick="location.href='{{ url_for('reports.report_page') }}'">Reports</button>
+    <a href="{{ url_for('case.dashboard') }}">
+  <img src="/static/helm-logo.png" alt="Helm" style="height:45px;">
+</a>
+    
+<div class="btn-group">
 
-      <div class="dropdown">
-        <button class="btn dropdown-btn">Setup ▼</button>
-        <div class="dropdown-content">
-          <a href="/db_structure">View DB Structure</a>
-          <a href="javascript:void(0)" onclick="openModal('apiModal')">API Keys</a>
-        </div>
-      </div>
+ <button class="btn" onclick="location.href='{{ url_for('case.dashboard') }}'">Home</button>
+  <button class="btn" onclick="openModal('clientModal')">+ Add Client</button>
+  <button class="btn" onclick="openModal('caseModal')">+ Add Case</button>
+  <button class="btn" onclick="location.href='{{ url_for('reports.report_page') }}'">Reports</button>
 
-      <button class="btn" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
+  <div class="dropdown">
+    <button class="btn dropdown-btn">Setup ▼</button>
+    <div class="dropdown-content">
+      <a href="/db_structure">View DB Structure</a>
+      <a href="javascript:void(0)" onclick="openModal('apiModal')">API Keys</a>
     </div>
+  </div>
 
+<button class="btn" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
+  
+</div>
+
+
+    
     <img src="/static/redwood-logo.png" alt="Redwood">
   </div>
 
   <div class="container">
     <div class="left">
 
-      {% if selected_case and case_client %}
-      <h3 style="margin-top:30px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Case Information</h3>
-      <div class="info-box" style="display:grid; grid-template-columns:30% 30% 40%; gap:0; font-size:13px; line-height:1.35; background:none; border:none; overflow:hidden; padding:0; margin:0 15px;">
 
-        <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
-          <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Debtor</div>
-          <div style="font-size:15px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
-            {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}
-            <a href="javascript:void(0)" onclick="openRenameModal('debtor')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
-          </div>
-          <div style="color:#666; font-size:0.9em; margin-bottom:6px;">Client ID: {{ case_client.id }}</div>
-          <div style="line-height:1.55; flex:1;">
-            {{ selected_case.debtor_first }} {{ selected_case.debtor_last }}<br>
-            <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a><br>
-            <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
-          </div>
-          <div style="margin-top:8px; color:#666; font-size:0.9em;">
-            Type: {{ selected_case.debtor_business_type or '—' }}
-          </div>
+
+
+
+
+
+
+
+
+
+
+
+
+      
+{% if selected_case and case_client %}
+<h3 style="margin-top:30px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Case Information</h3>
+<div class="info-box" style="display:grid; 
+     grid-template-columns:30% 30% 40%;   /* ← NEW WIDTHS */
+     gap:0; 
+     font-size:13px; 
+     line-height:1.35; 
+     background:none; 
+     border:none; 
+     overflow:hidden; 
+     padding:0; 
+     margin:0 15px;">
+
+  <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
+    <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Debtor</div>
+    <div style="font-size:15px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+      {{ selected_case.debtor_business_name or selected_case.debtor_first + ' ' + selected_case.debtor_last }}
+      <a href="javascript:void(0)" onclick="openRenameModal('debtor')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
+    </div>
+    <div style="color:#666; font-size:0.9em; margin-bottom:6px;">Client ID: {{ case_client.id }}</div>
+    <div style="line-height:1.55; flex:1;">
+      {{ selected_case.debtor_first }} {{ selected_case.debtor_last }}<br>
+      <a href="tel:{{ selected_case.phone }}">{{ selected_case.phone }}</a><br>
+      <a href="mailto:{{ selected_case.email }}">{{ selected_case.email }}</a>
+    </div>
+    <div style="margin-top:8px; color:#666; font-size:0.9em;">
+      Type: {{ selected_case.debtor_business_type or '—' }}
+    </div>
+  </div>
+
+  <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
+    <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Client</div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+      <div>
+        <div style="font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
+            {{ case_client.business_name }}
+            <a href="javascript:void(0)" onclick="openRenameModal('client')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
         </div>
-
-        <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
-          <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Client</div>
-          
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <div>
-              <div style="font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
-                {{ case_client.business_name }}
-                <a href="javascript:void(0)" onclick="openRenameModal('client')" style="text-decoration:none; font-size:12px; color:#E35205;">✎</a>
-              </div>
-              <div style="color:#666; font-size:0.9em;">ID: {{ case_client.id }}</div>
-            </div>
-            
-            {% if case_client.id %}
-              <img src="{{ url_for('static', filename='clientlogo/' ~ case_client.id ~ '.png') }}"
-                   alt="{{ case_client.business_name }} Logo"
-                   class="client-logo-dashboard"
-                   onerror="this.style.display='none'">
-            {% endif %}
-          </div>
-          
-          <div style="line-height:1.55; flex:1;">
-            {{ case_client.contact_first }} {{ case_client.contact_last }}<br>
-            <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a><br>
-            <a href="mailto:{{ case_client.email }}">{{ case_client.email }}</a>
-          </div>
-        </div>
-
-        <div style="padding:12px 10px; background:#fff; border:1px solid #eaeaea; display:flex; flex-direction:column;">
-          <div style="font-size:12.5px; font-weight:600; color:#333; margin-bottom:6px;">
-            Other cases for this client
-            <span style="color:#888; font-weight:normal; font-size:11px;">
-              ({{ client_cases|length }} total)
-            </span>
-          </div>
-
-          <div style="flex:1; min-height:0; max-height:108px; overflow:hidden; border:1px solid #eee; border-radius:5px; background:#fcfcfc;">
-            <div style="height:100%; overflow-y:scroll; padding:0 8px 0 4px; scrollbar-width: auto; -ms-overflow-style: scrollbar;">
-              {% for c in client_cases %}
-              <a href="?case_id={{ c.id }}"
-                 style="display:flex; justify-content:space-between; align-items:center; height:18px; padding:0 4px; text-decoration:none; background:{% if c.id == selected_case.id %}#e8f4fd{% else %}transparent{% endif %}; font-size:11.8px; line-height:1.4;">
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
-                  {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
-                </span>
-                <span style="color:#000; font-weight:normal;">{{ c.balance|money }}</span>
-              </a>
-              {% endfor %}
-            </div>
-          </div>
-
-          {% if client_cases|length > 6 %}
-          <a href="{{ url_for('client.client_cases', client_id=case_client.id) }}" style="margin-top:6px; color:#E35205; font-weight:bold; font-size:11.5px; text-align:center; text-decoration:none;">
-            → View all {{ client_cases|length }} cases
-          </a>
-          {% endif %}
-        </div>
+        <div style="color:#666; font-size:0.9em;">ID: {{ case_client.id }}</div>
       </div>
+      
+      {% if case_client.id %}
+        <img src="{{ url_for('static', filename='clientlogo/' ~ case_client.id ~ '.png') }}"
+             alt="{{ case_client.business_name }} Logo"
+             class="client-logo-dashboard"
+             onerror="this.style.display='none'">
       {% endif %}
+    </div>
+    
+    <div style="line-height:1.55; flex:1;">
+      {{ case_client.contact_first }} {{ case_client.contact_last }}<br>
+      <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a><br>
+      <a href="mailto:{{ case_client.email }}">{{ case_client.email }}</a>
+    </div>
+  </div>
 
+<div style="padding:12px 10px; background:#fff; border:1px solid #eaeaea; display:flex; flex-direction:column;">
+  <div style="font-size:12.5px; font-weight:600; color:#333; margin-bottom:6px;">
+    Other cases for this client
+    <span style="color:#888; font-weight:normal; font-size:11px;">
+      ({{ client_cases|length }} total)
+    </span>
+  </div>
+
+  <div style="flex:1; min-height:0; max-height:108px; overflow:hidden; border:1px solid #eee; border-radius:5px; background:#fcfcfc;">
+    <div style="height:100%; overflow-y:scroll; padding:0 8px 0 4px;
+                /* ← FORCE SCROLLBAR ALWAYS VISIBLE */
+                scrollbar-width: auto;
+                -ms-overflow-style: scrollbar;">
+      <!-- Webkit browsers – thin grey scrollbar, always shown -->
+      <style>
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar { width: 8px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 4px; }
+        div[style*="overflow-y:scroll"]::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+      </style>
+
+      {% for c in client_cases %}
+{% set bal = (c.balance|default(0)|float)|round(2) %}
+<!-- DEBUG: case_id={{ c.id }} raw_balance="{{ c.balance }}" type={{ c.balance.__class__.__name__ if c.balance is not none else "None" }} -->
+        <a href="?case_id={{ c.id }}"
+           style="display:flex; justify-content:space-between; align-items:center;
+                  height:18px; padding:0 4px; text-decoration:none;
+                  background:{% if c.id == selected_case.id %}#e8f4fd{% else %}transparent{% endif %};
+                  font-size:11.8px; line-height:1.4;">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
+            {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
+          </span>
+   
+<span style="color:#000; font-weight:normal;">{{ c.balance|money }}</span>
+
+          
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if client_cases|length > 6 %}
+<a href="{{ url_for('client.client_cases', client_id=case_client.id) }}" style="margin-top:6px; color:#E35205; font-weight:bold; font-size:11.5px; text-align:center; text-decoration:none;">
+    → View all {{ client_cases|length }} cases
+</a>
+  {% endif %}
+</div>
+
+
+  
+</div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+      
       {% if not selected_case %}
       <div class="section">
-        <div style="margin-bottom:15px;">
-          <h3 style="margin:0 0 8px 0; font-size:1.4em;">Search Cases</h3>
-          <div class="search-form">
-            <input type="text" id="searchInput" placeholder="Search clients, debtors, postcode, email, phone..." onkeypress="if(event.key==='Enter') doSearch()">
-            <button class="btn" onclick="doSearch()">Search</button>
-          </div>
-        </div>
+<div style="margin-bottom:15px;">
+  <h3 style="margin:0 0 8px 0; font-size:1.4em;">Search Cases</h3>
+  <div class="search-form">
+    <input type="text" id="searchInput" placeholder="Search clients, debtors, postcode, email, phone..." onkeypress="if(event.key==='Enter') doSearch()">
+    <button class="btn" onclick="doSearch()">Search</button>
+  </div>
+</div>
         <div id="searchResults"></div>
       </div>
       {% endif %}
 
-      {% if selected_case %}
+{% if selected_case %}
       <div class="section" style="display:flex; flex-direction:column; height:100%; border-bottom: none; padding: 0 0 15px 0;">
 
-        <h3 style="margin-top:20px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Custom Fields</h3>
-        <div class="info-box" style="background:#fff; border:1px solid #eaeaea; margin:0 15px 20px 15px; padding:10px 12px 12px 12px; position: relative;">
-          {% if custom_fields %}
-          <button type="button" id="customFieldsToggle" aria-label="Edit custom fields" style="position:absolute; top:-12px; right:10px; border:1px solid #e0e0e0; background:#fff; color:#555; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-            ✏️
-          </button>
-          {% endif %}
-          <form id="customFieldsForm" action="{{ url_for('case.update_custom_fields') }}" method="post">
-            <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-              {% if custom_fields %}
+{% if selected_case %}
+<h3 style="margin-top:20px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Custom Fields</h3>
+<div class="info-box" style="background:#fff; border:1px solid #eaeaea; margin:0 15px 20px 15px; padding:10px 12px 12px 12px; position: relative;">
+    {% if custom_fields %}
+    <button type="button" id="customFieldsToggle" aria-label="Edit custom fields" style="position:absolute; top:-12px; right:10px; border:1px solid #e0e0e0; background:#fff; color:#555; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        ✏️
+    </button>
+    {% endif %}
+    <form id="customFieldsForm" action="{{ url_for('case.update_custom_field') }}" method="post">
+        <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+        
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            {% if custom_fields %}
                 {% for field in custom_fields %}
                 <div style="display: flex; flex-direction: column;">
-                  <label style="font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 2px;">
-                    {{ field.field_name }}
-                  </label>
-                  <input type="{{ field.field_type if field.field_type else 'text' }}" 
-                         name="custom_field_{{ field.field_id }}" 
-                         value="{{ field.field_value or '' }}"
-                         class="custom-field-input"
-                         readonly
-                         style="border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; font-size: 12px; width: 100%; box-sizing: border-box; background:#f3f3f3; color:#333;">
+                    <label style="font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 2px;">
+                        {{ field.field_name }}
+                    </label>
+                    <input type="{{ field.field_type if field.field_type else 'text' }}" 
+                           name="custom_field_{{ field.field_id }}" 
+                           value="{{ field.field_value or '' }}"
+                           class="custom-field-input"
+                           readonly
+                           style="border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; font-size: 12px; width: 100%; box-sizing: border-box; background:#f3f3f3; color:#333;">
                 </div>
                 {% endfor %}
-              {% else %}
+            {% else %}
                 <p style="color: #999; font-style: italic; font-size: 12px; grid-column: 1 / 5; text-align: center;">
-                  No custom fields have been enabled for this client.
+                    No custom fields have been enabled for this client.
                 </p>
-              {% endif %}
-            </div>
-          </form>
-        </div>
+            {% endif %}
+           </div>
+    </form>
+</div>
+{% endif %}
+      
 
+
+
+        
         <h3 style="margin-left: 15px; margin-top: 29px;">Notes</h3>
         <div class="add-bar-container" style="position: static; border-top: none; padding: 0 15px 15px 15px; margin-top: 0;">
           <form class="add-bar notes-add-bar" action="/add_note" method="post">
@@ -531,11 +641,25 @@
                 <td>{{ n.type }}</td>
                 <td class="note-text">{{ n.note }}</td>
                 <td>{{ n.username }}</td>
-                <td class="note-actions" style="text-align:center; white-space:nowrap;">
-                  <a href="javascript:void(0)" class="flat-action" onclick="editNote({{ n.id }}, '{{ n.type|ejs }}', '{{ n.note|ejs }}')">✏️</a>
-                  <span style="color:#ccc;">|</span>
-                  <a href="javascript:void(0)" class="flat-action flat-del" onclick="deleteNote({{ n.id }})">❌</a>
-                </td>
+
+                
+<td class="note-actions" style="text-align:center; white-space:nowrap;">
+  <a 
+    href="javascript:void(0)" 
+    class="flat-action"
+    onclick="editNote({{ n.id }}, '{{ n.type|e }}', '{{ n.note|e }}')"
+  >✏️</a>
+
+  <span style="color:#ccc;">|</span>
+
+  <a 
+    href="javascript:deleteNote({{ n.id }})" 
+    class="flat-action flat-del"
+  >❌</a>
+</td>
+
+
+                
               </tr>
               {% endfor %}
             </tbody>
@@ -552,7 +676,7 @@
 
       {% if selected_case %}
       <div class="section" style="display:flex; flex-direction:column; height:100%; padding: 0 15px;">
-        <h3 style="margin-top:15px; margin-left:0; margin-bottom:8px;">Financials</h3>
+      <h3 style="margin-top:15px; margin-left:0; margin-bottom:8px;">Financials</h3>
 
         <div class="totals">
           <div class="total-box">Invoices: {{ totals.Invoice|money }}</div>
@@ -564,37 +688,37 @@
           BALANCE: {{ balance|money }}
         </div>
 
-        <h3 style="margin-top:5px; margin-left:0; margin-bottom:8px;">Transactions</h3>        
+      <h3 style="margin-top:5px; margin-left:0; margin-bottom:8px;">Transactions</h3>        
         
-        <div class="add-bar-container">
-          <form class="add-bar" action="{{ url_for('case.add_transaction') }}" method="post">
-            <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+<div class="add-bar-container">
+  <form class="add-bar" action="{{ url_for('case.add_transaction') }}" method="post">
+    <input type="hidden" name="case_id" value="{{ selected_case.id }}">
 
-            <select name="type" id="transType" required>
-              <option>Invoice</option>
-              <option>Payment</option>
-              <option>Charge</option>
-              <option>Interest</option>
-            </select>
+    <select name="type" id="transType" required>
+      <option>Invoice</option>
+      <option>Payment</option>
+      <option>Charge</option>
+      <option>Interest</option>
+    </select>
 
-            <input type="number" name="amount" step="0.01" placeholder="Amount" required>
+    <input type="number" name="amount" step="0.01" placeholder="Amount" required>
 
-            <input type="date" name="transaction_date" value="{{ today_str }}">
+    <input type="date" name="transaction_date" value="{{ today_str }}">
 
-            <input name="note" placeholder="Note">
+    <input name="note" placeholder="Note">
 
-            <button type="submit">Add</button>
+    <button type="submit">Add</button>
 
-            <div id="chargeOpts" style="display:none; grid-column:1 / 5; margin-top:6px; padding-left:8px;">
-              <label style="margin-right:25px; font-size:11px;">
-                <input type="checkbox" name="recoverable" value="1"> Recoverable
-              </label>
-              <label style="font-size:11px;">
-                <input type="checkbox" name="billable" value="1"> Billable
-              </label>
-            </div>
-          </form>
-        </div>
+    <div id="chargeOpts" style="display:none; grid-column:1 / 5; margin-top:6px; padding-left:8px;">
+      <label style="margin-right:25px; font-size:11px;">
+        <input type="checkbox" name="recoverable" value="1"> Recoverable
+      </label>
+      <label style="font-size:11px;">
+        <input type="checkbox" name="billable" value="1"> Billable
+      </label>
+    </div>
+  </form>
+</div>
 
         <div class="transactions-scroll">
           {% if transactions %}
@@ -624,7 +748,7 @@
                 <td class="trans-actions" style="text-align:center; white-space:nowrap;">
                   <a href="javascript:void(0)" class="flat-action" onclick="openEditTransactionModal({{ t.id }})">✏️</a>
                   <span style="color:#ccc;">|</span>
-                  <a href="javascript:void(0)" class="flat-action flat-del" onclick="deleteTransaction({{ t.id }})">❌</a>
+                  <a href="javascript:deleteTransaction({{ t.id }})" class="flat-action flat-del">❌</a>
                 </td>
               </tr>
               {% endfor %}
@@ -634,6 +758,7 @@
           <p style="text-align:center; color:#777; margin:20px 0;">No transactions yet</p>
           {% endif %}
         </div>
+        
       </div>
       {% endif %}
 
@@ -651,7 +776,7 @@
           <tbody>
             {% for c in recent_cases %}
             <tr>
-              <td><a href="/client/{{ c.client_id }}/cases">{{ c.business_name }}</a></td>
+             <td><a href="/client/{{ c.client_id }}/cases">{{ c.business_name }}</a></td>
               <td><a href="/dashboard?case_id={{ c.case_id }}">{{ c.debtor }}</a></td>
               <td>{{ c.open_date|format_date }}</td>
             </tr>
@@ -664,57 +789,62 @@
     </div>
   </div>
 
-  <!-- Modals -->
-  <div id="clientModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('clientModal')">×</span>
-      <h3>Add New Client</h3>
-      <form action="{{ url_for('client.add_client') }}" method="post">
-        <input type="text" name="business_type" placeholder="Business Type" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="business_name" placeholder="Business Name" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="contact_first" placeholder="Contact First Name" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="contact_last" placeholder="Contact Last Name" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="tel" name="phone" placeholder="Phone" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="email" name="email" placeholder="Email" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="bacs_details" placeholder="BACS Details" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="number" name="default_interest_rate" placeholder="Default Interest Rate %" step="0.01" value="8" style="width:100%; margin-bottom:10px; height:32px;">
-        <button type="submit" class="btn" style="width:100%;">Add Client</button>
-      </form>
-    </div>
+<div id="clientModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('clientModal')">&times;</span>
+    <h3>Add New Client</h3>
+    <form action="{{ url_for('client.add_client') }}" method="post">
+      <input type="text" name="business_type" placeholder="Business Type" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="business_name" placeholder="Business Name" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="contact_first" placeholder="Contact First Name" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="contact_last" placeholder="Contact Last Name" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="tel" name="phone" placeholder="Phone" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="email" name="email" placeholder="Email" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="bacs_details" placeholder="BACS Details" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="number" name="default_interest_rate" placeholder="Default Interest Rate %" step="0.01" value="8" style="width:100%; margin-bottom:10px; height:32px;">
+      <button type="submit" class="btn" style="width:100%;">Add Client</button>
+    </form>
   </div>
+</div>
 
-  <div id="caseModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('caseModal')">×</span>
-      <h3>Add New Case</h3>
-      <form action="{{ url_for('case.add_case') }}" method="post">
-        <select name="client_id" required style="width:100%; margin-bottom:10px; height:32px;">
-          <option value="">-- Select Client --</option>
-          {% for client in clients %}
-            <option value="{{ client.id }}">{{ client.business_name }} (ID: {{ client.id }})</option>
-          {% endfor %}
-        </select>
-        <input type="text" name="debtor_business_type" placeholder="Debtor Business Type (e.g. Ltd, Sole Trader)" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="debtor_business_name" placeholder="Debtor Business Name" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="debtor_first" placeholder="Debtor First Name" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="debtor_last" placeholder="Debtor Last Name" required style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="tel" name="phone" placeholder="Phone" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="email" name="email" placeholder="Email" style="width:100%; margin-bottom:10px; height:32px;">
-        <input type="text" name="postcode" placeholder="Postcode" style="width:100%; margin-bottom:10px; height:32px;">
-        <label style="display:block; margin:10px 0 5px 0; font-weight:bold;">Next Action Date (optional)</label>
-        <input type="date" name="next_action_date" style="width:100%; margin-bottom:15px; height:32px;">
-        <button type="submit" class="btn" style="width:100%;">Add Case</button>
-      </form>
-    </div>
+<div id="caseModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('caseModal')">&times;</span>
+    <h3>Add New Case</h3>
+    <form action="{{ url_for('case.add_case') }}" method="post">
+      <select name="client_id" required style="width:100%; margin-bottom:10px; height:32px;">
+        <option value="">-- Select Client --</option>
+        {% for client in clients %}
+          <option value="{{ client.id }}">{{ client.business_name }} (ID: {{ client.id }})</option>
+        {% endfor %}
+      </select>
+
+      <input type="text" name="debtor_business_type" placeholder="Debtor Business Type (e.g. Ltd, Sole Trader)" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="text" name="debtor_business_name" placeholder="Debtor Business Name" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="text" name="debtor_first" placeholder="Debtor First Name" required style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="debtor_last" placeholder="Debtor Last Name" required style="width:100%; margin-bottom:10px; height:32px;">
+
+      <input type="tel" name="phone" placeholder="Phone" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="email" name="email" placeholder="Email" style="width:100%; margin-bottom:10px; height:32px;">
+      <input type="text" name="postcode" placeholder="Postcode" style="width:100%; margin-bottom:10px; height:32px;">
+
+      <label style="display:block; margin:10px 0 5px 0; font-weight:bold;">Next Action Date (optional)</label>
+      <input type="date" name="next_action_date" style="width:100%; margin-bottom:15px; height:32px;">
+
+      <button type="submit" class="btn" style="width:100%;">Add Case</button>
+    </form>
   </div>
+</div>
 
   <div id="noteEditModal" class="modal">
     <div class="modal-content" style="width:550px;">
-      <span class="close" onclick="closeModal('noteEditModal')">×</span>
+      <span class="close" onclick="closeModal('noteEditModal')">&times;</span>
       <h3>Edit Note</h3>
       <form id="noteEditForm" action="{{ url_for('case.edit_note') }}" method="post">
         <input type="hidden" name="note_id" id="editNoteId">
-        <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+        <input type="hidden" name="case_id" value="{{ selected_case.id }}">
         
         <label for="editNoteType" style="display:block; margin-top:10px; font-weight:bold;">Note Type:</label>
         <select name="type" id="editNoteType" required style="width:100%; margin-bottom:10px; height:32px; font-size:12px; padding:0 8px;">
@@ -736,11 +866,11 @@
 
   <div id="transEditModal" class="modal">
     <div class="modal-content" style="width:550px;">
-      <span class="close" onclick="closeModal('transEditModal')">×</span>
+      <span class="close" onclick="closeModal('transEditModal')">&times;</span>
       <h3>Edit Transaction</h3>
       <form id="transEditForm" action="{{ url_for('case.edit_transaction') }}" method="post">
         <input type="hidden" name="trans_id" id="editTransId">
-        <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+        <input type="hidden" name="case_id" value="{{ selected_case.id }}">
         
         <label for="editTransAmount" style="display:block; margin-top:10px; font-weight:bold;">Amount:</label>
         <input type="number" name="amount" id="editTransAmount" step="0.01" required style="width:100%; margin-bottom:10px; height:32px; font-size:12px; padding:0 8px;">
@@ -748,88 +878,65 @@
         <label for="editTransNote" style="display:block; margin-top:10px; font-weight:bold;">Note:</label>
         <textarea name="note" id="editTransNote" style="width:100%; height:70px; padding:8px; box-sizing:border-box; font-size:12px;"></textarea>
         
-        <div id="chargeOptions" style="margin-top:10px; display:flex; gap:15px; display:none;">
-          <label>
-            <input type="checkbox" name="recoverable" value="1" id="editTransRecoverable"> Recoverable
-          </label>
-          <label>
-            <input type="checkbox" name="billable" value="1" id="editTransBillable"> Billable
-          </label>
-        </div>
+{# ---- NEW: Only visible when editing a Charge ---- #}
+<div id="chargeOptions" style="margin-top:10px; display:flex; gap:15px; display:none;">
+    <label>
+        <input type="checkbox" name="recoverable" value="1" id="editTransRecoverable" style="width:auto; height:10px;">
+        Recoverable
+    </label>
+    <label>
+        <input type="checkbox" name="billable" value="1" id="editTransBillable" style="width:auto; height:10px;">
+        Billable
+    </label>
+</div>
 
         <button type="submit" class="btn" style="width:100%; margin-top:15px; height:32px;">Save Changes</button>
       </form>
     </div>
   </div>
 
-  <div id="renameModal" class="modal">
-    <div class="modal-content" style="width:400px;">
-      <span class="close" onclick="closeModal('renameModal')">×</span>
-      <h3 id="renameTitle">Rename</h3>
-      <form id="renameForm" method="post">
-        <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
-        <input type="hidden" name="target_id" id="renameTargetId">
-        
-        <div style="margin-bottom:15px;">
-          <label id="renameLabel" style="display:block; margin-bottom:5px; font-weight:bold;">New Name:</label>
-          <input type="text" name="new_name" id="renameInput" required style="width:100%; height:32px; padding:0 8px;">
-        </div>
-        
-        <button type="submit" class="btn" style="width:100%;">Save Changes</button>
-      </form>
-    </div>
-  </div>
 
   <script>
-    // Modal control
-    function openModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.add('active');
-    }
+    // General Modal Functions
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    function closeModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.remove('active');
-    }
-
-    // Search
+    // Search Functions (MOVED HERE FOR RELIABILITY)
     function doSearch() {
-      const input = document.getElementById('searchInput');
-      if (!input) return;
-      const q = input.value.trim();
+      const q = document.getElementById('searchInput').value.trim();
       if (q.length < 2) {
         document.getElementById('searchResults').innerHTML = '';
         return;
       }
+
       fetch(`/search?q=${encodeURIComponent(q)}`)
-        .then(r => r.json())
+        .then(response => response.json())
         .then(results => {
-          let html = results.length === 0 
-            ? '<p style="margin:8px 0; color:#777; text-align:center;">No results found.</p>'
-            : results.map(r => {
-                const debtor = r.debtor_name || 'N/A';
-                const contact = [r.postcode, r.email, r.phone].filter(Boolean).join(' | ');
-                return `<div style="border-bottom:1px solid #eee; padding:6px 0;">
-                  <a href="/dashboard?case_id=${r.case_id}" style="font-weight:bold; color:#333; text-decoration:none;">Case #${r.case_id} (${debtor})</a>
-                  <div style="font-size:11px; color:#555;">Client: ${r.client_name}</div>
-                  <div style="font-size:11px; color:#555;">${contact}</div>
-                </div>`;
-              }).join('');
+          let html = '';
+          if (results.length === 0) {
+            html = '<p style="margin:8px 0; color:#777; text-align:center;">No results found.</p>';
+          } else {
+            results.forEach(r => {
+              const debtor = r.debtor_name || 'N/A';
+              const contact = [r.postcode, r.email, r.phone].filter(Boolean).join(' | ');
+              html += `<div style="border-bottom:1px solid #eee; padding:6px 0;">
+                        <a href="/dashboard?case_id=${r.case_id}" style="font-weight:bold; color:#333; text-decoration:none;">Case #${r.case_id} (${debtor})</a>
+                        <div style="font-size:11px; color:#555;">Client: ${r.client_name}</div>
+                        <div style="font-size:11px; color:#555;">${contact}</div>
+                       </div>`;
+            });
+          }
           document.getElementById('searchResults').innerHTML = html;
         })
-        .catch(err => console.error('Search error:', err));
+        .catch(error => console.error('Search error:', error));
     }
+    
+    // Transaction Logic
+    document.getElementById('transType').addEventListener('change', function() {
+        document.getElementById('chargeOpts').style.display = (this.value === 'Charge' ? 'grid' : 'none');
+    });
 
-    // Transaction type change
-    const transType = document.getElementById('transType');
-    if (transType) {
-      transType.addEventListener('change', function() {
-        const opts = document.getElementById('chargeOpts');
-        if (opts) opts.style.display = this.value === 'Charge' ? 'grid' : 'none';
-      });
-    }
-
-    // Edit note
+    // NOTE EDIT FUNCTION (FIXED)
     function editNote(id, type, note) {
       document.getElementById('editNoteId').value = id;
       document.getElementById('editNoteType').value = type;
@@ -837,111 +944,144 @@
       openModal('noteEditModal');
     }
 
-    // Edit transaction
-    function openEditTransactionModal(id) {
-      fetch(`/get_transaction/${id}`)
-        .then(r => {
-          if (!r.ok) throw new Error('Failed to load transaction');
-          return r.json();
-        })
-        .then(data => {
-          document.getElementById('editTransId').value = data.id;
-          document.getElementById('editTransAmount').value = data.amount;
-          document.getElementById('editTransNote').value = data.description || '';
+    // TRANSACTION EDIT FUNCTION (FIXED)
+function openEditTransactionModal(id) {
+  fetch(`/get_transaction/${id}`)
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('editTransId').value = data.id;
+      document.getElementById('editTransAmount').value = data.amount;
+      document.getElementById('editTransNote').value = data.description || '';
 
-          const chargeOptions = document.getElementById('chargeOptions');
-          if (data.type === 'Charge') {
-            chargeOptions.style.display = 'flex';
-            document.getElementById('editTransRecoverable').checked = data.recoverable;
-            document.getElementById('editTransBillable').checked = data.billable;
-          } else {
-            chargeOptions.style.display = 'none';
-          }
+      const chargeOptions = document.getElementById('chargeOptions');
+      if (data.type === 'Charge') {
+        chargeOptions.style.display = 'flex';
+        document.getElementById('editTransRecoverable').checked = data.recoverable;
+        document.getElementById('editTransBillable').checked = data.billable;
+      } else {
+        chargeOptions.style.display = 'none';
+      }
 
-          openModal('transEditModal');
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Could not load transaction for editing.');
-        });
-    }
+      openModal('transEditModal');
+    })
+    .catch(error => console.error('Error:', error));
+}
 
-    // Delete note
-    function deleteNote(id) {
-      if (!confirm('Delete this note?')) return;
-      fetch(`/delete_note/${id}`, {
-        method: 'POST',
-        credentials: 'same-origin'
-      })
-        .then(r => {
-          if (!r.ok) throw new Error('Delete failed');
-          location.reload();
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Error deleting note');
-        });
-    }
 
-    // Delete transaction
-    function deleteTransaction(id) {
-      if (!confirm('Delete this transaction?')) return;
-      fetch(`/delete_transaction/${id}`, {
-        method: 'POST',
-        credentials: 'same-origin'
-      })
-        .then(r => {
-          if (!r.ok) throw new Error('Delete failed');
-          location.reload();
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Error deleting transaction');
-        });
-    }
 
-    // Rename modal
-    function openRenameModal(type) {
-      const title = document.getElementById('renameTitle');
-      const label = document.getElementById('renameLabel');
-      const input = document.getElementById('renameInput');
-      const targetId = document.getElementById('renameTargetId');
-      const form = document.getElementById('renameForm');
 
-      if (type === 'debtor') {
+// NEW RENAME LOGIC
+function openRenameModal(type) {␊
+    const title = document.getElementById('renameTitle');␊
+    const label = document.getElementById('renameLabel');␊
+    const input = document.getElementById('renameInput');␊
+    const form = document.getElementById('renameForm');␊
+    const targetIdField = document.getElementById('renameTargetId');␊
+
+    if (type === 'debtor') {
         title.innerText = "Rename Debtor";
         label.innerText = "New Debtor Business Name:";
         input.value = "{{ selected_case.debtor_business_name or '' }}";
-        targetId.value = "{{ selected_case.id if selected_case else '' }}";
+        targetIdField.value = "{{ selected_case.id if selected_case else '' }}";
         form.action = "{{ url_for('case.rename_debtor') }}";
-      } else {
+    } else {
         title.innerText = "Rename Client";
         label.innerText = "New Client Business Name:";
         input.value = "{{ case_client.business_name if case_client else '' }}";
-        targetId.value = "{{ case_client.id if case_client else '' }}";
+        targetIdField.value = "{{ case_client.id if case_client else '' }}";
         form.action = "{{ url_for('client.rename_client') }}";
-      }
-      openModal('renameModal');
     }
+    openModal('renameModal');
+}
 
-    // Custom fields toggle
-    const customFieldsToggle = document.getElementById('customFieldsToggle');
-    if (customFieldsToggle) {
-      let isEditing = false;
-      const form = document.getElementById('customFieldsForm');
-      const inputs = document.querySelectorAll('.custom-field-input');
+// CUSTOM FIELDS EDIT TOGGLE
+const customFieldsToggle = document.getElementById('customFieldsToggle');
+if (customFieldsToggle) {
+  let isEditingCustomFields = false;
+  const customFieldsForm = document.getElementById('customFieldsForm');
+  const customFieldInputs = Array.from(document.querySelectorAll('.custom-field-input'));
 
-      customFieldsToggle.addEventListener('click', () => {
-        isEditing = !isEditing;
-        inputs.forEach(input => {
-          input.readOnly = !isEditing;
-          input.style.backgroundColor = isEditing ? '#fff' : '#f3f3f3';
-        });
-        customFieldsToggle.textContent = isEditing ? '💾' : '✏️';
-        if (!isEditing && form) form.submit();
-      });
+  customFieldsToggle.addEventListener('click', () => {
+    isEditingCustomFields = !isEditingCustomFields;
+
+    customFieldInputs.forEach(input => {
+      input.readOnly = !isEditingCustomFields;
+      input.style.backgroundColor = isEditingCustomFields ? '#fff' : '#f3f3f3';
+    });
+
+    customFieldsToggle.textContent = isEditingCustomFields ? '💾' : '✏️';
+    customFieldsToggle.setAttribute(
+      'aria-label',
+      isEditingCustomFields ? 'Save custom fields' : 'Edit custom fields'
+    );
+
+    if (!isEditingCustomFields && customFieldsForm) {
+      customFieldsForm.submit();
     }
+  });
+}
+
+// Delete Functions
+function deleteNote(id) {
+  if (confirm("Delete this note?")) {
+    fetch(`/delete_note/${id}`, {method: 'POST'})
+      .then(() => location.reload());
+  }
+}
+
+function deleteTransaction(id) {
+  if (confirm("Delete this transaction?")) {
+    fetch(`/delete_transaction/${id}`, {method: 'POST'})
+      .then(() => location.reload());
+  }
+}
+
+document.getElementById('apiModal').addEventListener('transitionend', function() {
+  if (this.classList.contains('active')) loadApiKeys();
+});
+
+// Global error handler
+window.addEventListener('error', function(e) {
+  if (e.filename && e.filename.includes('dashboard.html')) {
+    const msg = e.error ? e.error.message : e.message;
+    const line = e.lineno ? `Line ${e.lineno}` : '';
+    const box = document.createElement('div');
+    box.style.position = 'fixed'; box.style.top = '20px'; box.style.right = '20px';
+    box.style.background = '#ffebee'; box.style.color = '#c62828';
+    box.style.border = '2px solid #c62828'; box.style.padding = '15px';
+    box.style.borderRadius = '8px'; box.style.zIndex = '9999';
+    box.style.maxWidth = '400px'; box.style.fontFamily = 'Arial';
+    box.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    box.innerHTML = `<strong>JavaScript Error</strong><br>${line}: ${msg}`;
+    document.body.appendChild(box);
+  }
+});
   </script>
 
+
+<div id="renameModal" class="modal">
+  <div class="modal-content" style="width:400px;">
+    <span class="close" onclick="closeModal('renameModal')">&times;</span>
+    <h3 id="renameTitle">Rename</h3>
+    <form id="renameForm" method="post">
+      <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
+      <input type="hidden" name="target_id" id="renameTargetId">
+      
+      <div style="margin-bottom:15px;">
+        <label id="renameLabel" style="display:block; margin-bottom:5px; font-weight:bold;">New Name:</label>
+        <input type="text" name="new_name" id="renameInput" required style="width:100%; height:32px; padding:0 8px;">
+      </div>
+      
+      <button type="submit" class="btn" style="width:100%;">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+
+  
 </body>
 </html>
+
+
+
+
