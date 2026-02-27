@@ -248,9 +248,13 @@ function drawLinks() {
         const c1x = sourceOnRight ? start.x + bend : start.x - bend;
         const c2x = sourceOnRight ? end.x - bend : end.x + bend;
 
+        const isUserLink = (l.source_table === 'users' || l.target_table === 'users');
+        const linkColor = isUserLink ? '#b9c1c9' : '#4a6279';
+        const dotColor = isUserLink ? '#b9c1c9' : '#36516d';
+
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', `M ${start.x} ${start.y} C ${c1x} ${start.y}, ${c2x} ${end.y}, ${end.x} ${end.y}`);
-        path.setAttribute('stroke', '#4a6279');
+        path.setAttribute('stroke', linkColor);
         path.setAttribute('stroke-width', '1.8');
         path.setAttribute('fill', 'none');
         svg.appendChild(path);
@@ -259,14 +263,14 @@ function drawLinks() {
         startDot.setAttribute('cx', start.x);
         startDot.setAttribute('cy', start.y);
         startDot.setAttribute('r', '2.5');
-        startDot.setAttribute('fill', '#36516d');
+        startDot.setAttribute('fill', dotColor);
         svg.appendChild(startDot);
 
         const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         endDot.setAttribute('cx', end.x);
         endDot.setAttribute('cy', end.y);
         endDot.setAttribute('r', '2.5');
-        endDot.setAttribute('fill', '#36516d');
+        endDot.setAttribute('fill', dotColor);
         svg.appendChild(endDot);
     });
 
