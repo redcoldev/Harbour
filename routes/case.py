@@ -556,6 +556,19 @@ def dashboard():
                     case_strategy_runtime.get('step_index')
                 )
 
+            c.execute("""
+                SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
+                FROM case_strategy cs
+                JOIN strategies s ON s.id = cs.strategy_id
+                WHERE cs.case_id = %s
+            """, (case_id,))
+            case_strategy_runtime = c.fetchone()
+            if case_strategy_runtime:
+                strategy_last_steps, strategy_next_steps = _strategy_timeline(
+                    case_strategy_runtime.get('definition_json'),
+                    case_strategy_runtime.get('step_index')
+                )
+
     today_str = date.today().isoformat()
 
     return render_template('dashboard.html',
