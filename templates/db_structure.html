@@ -16,6 +16,9 @@
         .canvas { position:relative; width:2800px; height:1800px; background:#eef2f6; }
         .table-card {
             position:absolute; width:280px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
+        .canvas { position:relative; width:2600px; height:1600px; background:#eef2f6; }
+        .table-card {
+            position:absolute; width:260px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
             box-shadow:0 2px 6px rgba(0,0,0,0.12); user-select:none;
         }
         .card-header {
@@ -30,6 +33,12 @@
         .field-row.fk-target td:first-child { font-weight:700; color:#153d64; }
         .links-panel {
             width:360px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
+        .card-body { max-height:220px; overflow:auto; }
+        .fields { width:100%; border-collapse:collapse; font-size:12px; }
+        .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
+        .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
+        .links-panel {
+            width:340px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
         }
         .links-panel h3 { margin:4px 0 10px 0; }
         .link-item { font-size:12px; padding:6px 0; border-bottom:1px solid #eee; }
@@ -61,6 +70,7 @@
                         <tbody>
                         {% for col in columns %}
                             <tr class="field-row" data-table="{{ table }}" data-column="{{ col.column_name }}">
+                            <tr>
                                 <td>{{ col.column_name }}</td>
                                 <td>{{ col.data_type }}</td>
                             </tr>
@@ -103,6 +113,8 @@ function defaultLayout() {
         const row = Math.floor(i / cols);
         card.style.left = (30 + col * 320) + 'px';
         card.style.top = (30 + row * 300) + 'px';
+        card.style.left = (30 + col * 300) + 'px';
+        card.style.top = (30 + row * 280) + 'px';
     });
 }
 
@@ -191,6 +203,21 @@ function drawLinks() {
     });
 
     markLinkRows();
+        const from = document.getElementById('table-' + l.source_table);
+        const to = document.getElementById('table-' + l.target_table);
+        if (!from || !to) return;
+        const p1 = getCenter(from);
+        const p2 = getCenter(to);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const c1x = p1.x + (p2.x - p1.x) * 0.35;
+        const c2x = p1.x + (p2.x - p1.x) * 0.65;
+        path.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${c2x} ${p2.y}, ${p2.x} ${p2.y}`);
+        path.setAttribute('stroke', '#5c6f82');
+        path.setAttribute('stroke-width', '1.4');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+    });
 }
 
 function makeDraggable(card) {
