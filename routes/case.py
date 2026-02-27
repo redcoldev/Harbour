@@ -246,9 +246,21 @@ def update_case_status():
         
         c.execute('''
             INSERT INTO case_status_history 
-            (case_id, old_status, old_substatus, new_status, new_substatus, changed_by)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (case_id, old['status'], old['substatus'], new_status, new_substatus, current_user.id))
+            (case_id, old_status, old_substatus, new_status, new_substatus, changed_by, old_next_action_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (case_id, old['status'], old['substatus'], new_status, new_substatus, current_user.id, old['next_action_date']))
+
+        c.execute('''
+            INSERT INTO notes (case_id, type, note, created_by)
+            VALUES (%s, %s, %s, %s)
+        ''', (
+            case_id,
+            'Status',
+            f"Status changed to '{new_status}'"
+            + (f" / '{new_substatus}'" if new_substatus else '')
+            + (f". Next review date: {new_next_action_date}" if new_next_action_date else ''),
+            current_user.id
+        ))
 
     db.commit()
     return redirect(url_for('case.dashboard', case_id=case_id))
@@ -262,7 +274,7 @@ def undo_status(case_id):
 
     # Get the most recent status change
     c.execute("""
-        SELECT old_status, old_substatus
+        SELECT old_status, old_substatus, old_next_action_date
         FROM case_status_history
         WHERE case_id = %s
         ORDER BY changed_at DESC
@@ -276,15 +288,16 @@ def undo_status(case_id):
 
     old_status = last['old_status']
     old_substatus = last['old_substatus']
+    old_next_action_date = last['old_next_action_date']
 
     # 1. Revert the case status
     c.execute("""
         UPDATE cases
         SET status = %s,
             substatus = %s,
-            next_action_date = NULL
+            next_action_date = %s
         WHERE id = %s
-    """, (old_status, old_substatus, case_id))
+    """, (old_status, old_substatus, old_next_action_date, case_id))
 
     # 2. Delete that exact history row safely
     c.execute("""
