@@ -30,15 +30,35 @@ def db_structure():
 
     structure = {}
     for t in tables:
-        c.execute(f"""
+        c.execute("""
             SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
-            WHERE table_name = %s
+            WHERE table_schema = 'public'
+              AND table_name = %s
             ORDER BY ordinal_position
         """, (t,))
         structure[t] = c.fetchall()
 
-    return render_template('db_structure.html', structure=structure)
+    c.execute("""
+        SELECT
+            tc.table_name AS source_table,
+            kcu.column_name AS source_column,
+            ccu.table_name AS target_table,
+            ccu.column_name AS target_column
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name
+         AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu
+          ON ccu.constraint_name = tc.constraint_name
+         AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+        ORDER BY source_table, source_column
+    """)
+    links = c.fetchall()
+
+    return render_template('db_structure.html', structure=structure, links=links)
 
 
 # =============================================================================
