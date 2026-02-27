@@ -16,6 +16,16 @@ from datetime import date
 
 case_bp = Blueprint('case', __name__)
 
+
+def _strategy_timeline(definition_json, step_index):
+    steps = []
+    if isinstance(definition_json, dict):
+        steps = definition_json.get('steps') or []
+    if not isinstance(steps, list):
+        steps = []
+    idx = max(int(step_index or 0), 0)
+    return steps[max(0, idx - 3):idx], steps[idx:idx + 3]
+
 # ----------------------------------------------------------------------
 #  SEARCH - global search box + client autocomplete
 # ----------------------------------------------------------------------
@@ -74,10 +84,11 @@ def client_search():
 def add_case():
     db = get_db()
     c = db.cursor()
-    c.execute('''
+    next_action_date = request.form.get('next_action_date') or None
+    c.execute("""
         INSERT INTO cases (client_id, debtor_business_type, debtor_business_name, debtor_first, debtor_last, phone, email, postcode, next_action_date)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-    ''', (
+    """, (
         request.form['client_id'],
         request.form['debtor_business_type'],
         request.form['debtor_business_name'],
@@ -86,9 +97,28 @@ def add_case():
         request.form['phone'],
         request.form['email'],
         request.form.get('postcode', ''),
-        request.form['next_action_date']
+        next_action_date
     ))
     new_case_id = c.fetchone()['id']
+
+    c.execute("SELECT default_strategy_id FROM clients WHERE id = %s", (request.form['client_id'],))
+    row = c.fetchone()
+    default_strategy_id = row['default_strategy_id'] if row else None
+    if default_strategy_id:
+        c.execute("""
+            INSERT INTO case_strategy (case_id, strategy_id, step_index, next_action_date)
+            VALUES (%s, %s, 0, %s)
+            ON CONFLICT (case_id) DO NOTHING
+        """, (new_case_id, default_strategy_id, next_action_date or date.today().isoformat()))
+
+        c.execute("SELECT name FROM strategies WHERE id = %s", (default_strategy_id,))
+        strategy_row = c.fetchone()
+        strategy_name = strategy_row['name'] if strategy_row else f"#{default_strategy_id}"
+        c.execute("""
+            INSERT INTO notes (case_id, type, note, created_by)
+            VALUES (%s, 'Strategy', %s, %s)
+        """, (new_case_id, f"Case entered strategy '{strategy_name}' at step 0.", current_user.id))
+
     db.commit()
     flash('Case added')
     return redirect(url_for('case.dashboard', case_id=new_case_id))
@@ -357,6 +387,27 @@ def update_custom_fields():
     return redirect(url_for('case.dashboard', case_id=case_id))
 
 
+
+@case_bp.route('/set_case_mode', methods=['POST'])
+@login_required
+def set_case_mode():
+    case_id = request.form.get('case_id')
+    mode = request.form.get('mode')
+    if mode not in ('automated', 'manual', 'legal_hold'):
+        flash('Invalid case mode')
+        return redirect(url_for('case.dashboard', case_id=case_id))
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE cases SET mode = %s WHERE id = %s", (mode, case_id))
+    c.execute("""
+        INSERT INTO notes (case_id, type, note, created_by)
+        VALUES (%s, 'Strategy', %s, %s)
+    """, (case_id, f"Case mode changed to {mode}", current_user.id))
+    db.commit()
+    flash('Case mode updated')
+    return redirect(url_for('case.dashboard', case_id=case_id))
+
 # ----------------------------------------------------------------------
 #  MAIN DASHBOARD - THE BIG ONE
 # ----------------------------------------------------------------------
@@ -391,6 +442,9 @@ def dashboard():
     status_history = []
     custom_fields = [] # NEW
     derived_step_number = None
+    case_strategy_runtime = None
+    strategy_last_steps = []
+    strategy_next_steps = []
     balance = 0.0
     totals = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
     page = int(request.args.get('page', 1))
@@ -411,17 +465,22 @@ def dashboard():
 
             # --- NEW: Fetch Custom Fields & Values ---
             c.execute("""
-                SELECT 
-                    fd.id as field_id, 
-                    fd.field_name, 
+                SELECT
+                    fd.id AS field_id,
+                    fd.field_name,
                     fd.field_type,
-                    cv.field_value
-                FROM client_custom_field_link link
-                JOIN custom_field_definitions fd ON link.field_id = fd.id
-                LEFT JOIN case_custom_values cv ON (cv.field_id = fd.id AND cv.case_id = %s)
-                WHERE link.client_id = %s
-                ORDER BY fd.field_name
-            """, (case_id, selected_case['client_id']))
+                    cv.field_value,
+                    slots.slot_no
+                FROM custom_field_definitions fd
+                LEFT JOIN client_custom_field_slots slots
+                    ON slots.field_id = fd.id AND slots.client_id = %s
+                LEFT JOIN client_custom_field_link link
+                    ON link.field_id = fd.id AND link.client_id = %s
+                LEFT JOIN case_custom_values cv
+                    ON (cv.field_id = fd.id AND cv.case_id = %s)
+                WHERE slots.client_id IS NOT NULL OR link.client_id IS NOT NULL
+                ORDER BY COALESCE(slots.slot_no, 999), fd.field_name
+            """, (selected_case['client_id'], selected_case['client_id'], case_id))
             custom_fields = c.fetchall()
 
 
@@ -481,6 +540,19 @@ def dashboard():
                     balance += amt
                 totals[typ] += amt
 
+            c.execute("""
+                SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
+                FROM case_strategy cs
+                JOIN strategies s ON s.id = cs.strategy_id
+                WHERE cs.case_id = %s
+            """, (case_id,))
+            case_strategy_runtime = c.fetchone()
+            if case_strategy_runtime:
+                strategy_last_steps, strategy_next_steps = _strategy_timeline(
+                    case_strategy_runtime.get('definition_json'),
+                    case_strategy_runtime.get('step_index')
+                )
+
     today_str = date.today().isoformat()
 
     return render_template('dashboard.html',
@@ -494,6 +566,9 @@ def dashboard():
                            status_history=status_history,
                            custom_fields=custom_fields,
                            derived_step_number=derived_step_number,
+                           case_strategy_runtime=case_strategy_runtime,
+                           strategy_last_steps=strategy_last_steps,
+                           strategy_next_steps=strategy_next_steps,
                            balance=round(balance, 2),
                            totals={k: round(v, 2) for k, v in totals.items()},
                            today_str=today_str,
