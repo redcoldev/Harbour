@@ -2,8 +2,15 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from extensions import get_db
+import psycopg
 
 client_bp = Blueprint('client', __name__, url_prefix='/client')
+
+
+def _table_exists(c, table_name):
+    c.execute("SELECT to_regclass(%s) IS NOT NULL AS exists", (f"public.{table_name}",))
+    row = c.fetchone()
+    return bool(row and row['exists'])
 
 
 def _calculate_case_balance(c, case_id):
@@ -47,8 +54,14 @@ def client_dashboard(client_id):
     all_fields = c.fetchall()
 
     # Prefer deterministic slot mapping table; fallback to legacy link table.
-    c.execute("SELECT field_id FROM client_custom_field_slots WHERE client_id = %s ORDER BY slot_no", (client_id,))
-    linked_field_ids = [row['field_id'] for row in c.fetchall()]
+    linked_field_ids = []
+    try:
+        if _table_exists(c, 'client_custom_field_slots'):
+            c.execute("SELECT field_id FROM client_custom_field_slots WHERE client_id = %s ORDER BY slot_no", (client_id,))
+            linked_field_ids = [row['field_id'] for row in c.fetchall()]
+    except psycopg.errors.UndefinedTable:
+        linked_field_ids = []
+
     if not linked_field_ids:
         c.execute("SELECT field_id FROM client_custom_field_link WHERE client_id = %s", (client_id,))
         linked_field_ids = [row['field_id'] for row in c.fetchall()]
@@ -74,8 +87,14 @@ def update_fields():
         flash("You can only select up to 16 custom fields for a client.")
         return redirect(url_for('client.client_dashboard', client_id=client_id))
 
+    slots_table_exists = _table_exists(c, 'client_custom_field_slots')
+
     c.execute("DELETE FROM client_custom_field_link WHERE client_id = %s", (client_id,))
-    c.execute("DELETE FROM client_custom_field_slots WHERE client_id = %s", (client_id,))
+    if slots_table_exists:
+        try:
+            c.execute("DELETE FROM client_custom_field_slots WHERE client_id = %s", (client_id,))
+        except psycopg.errors.UndefinedTable:
+            slots_table_exists = False
 
     for idx, f_id in enumerate(selected_field_ids, start=1):
         c.execute("""
@@ -83,10 +102,14 @@ def update_fields():
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING
         """, (client_id, f_id))
-        c.execute("""
-            INSERT INTO client_custom_field_slots (client_id, slot_no, field_id)
-            VALUES (%s, %s, %s)
-        """, (client_id, idx, f_id))
+        if slots_table_exists:
+            try:
+                c.execute("""
+                    INSERT INTO client_custom_field_slots (client_id, slot_no, field_id)
+                    VALUES (%s, %s, %s)
+                """, (client_id, idx, f_id))
+            except psycopg.errors.UndefinedTable:
+                slots_table_exists = False
 
     db.commit()
     flash("Client custom fields updated")

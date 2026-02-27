@@ -13,8 +13,15 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from extensions import get_db
 from datetime import date
+import psycopg
 
 case_bp = Blueprint('case', __name__)
+
+
+def _table_exists(c, table_name):
+    c.execute("SELECT to_regclass(%s) IS NOT NULL AS exists", (f"public.{table_name}",))
+    row = c.fetchone()
+    return bool(row and row['exists'])
 
 
 def _strategy_timeline(definition_json, step_index):
@@ -466,24 +473,55 @@ def dashboard():
             c.execute("SELECT * FROM clients WHERE id = %s", (selected_case['client_id'],))
             case_client = c.fetchone()
 
-            # --- NEW: Fetch Custom Fields & Values ---
-            c.execute("""
-                SELECT
-                    fd.id AS field_id,
-                    fd.field_name,
-                    fd.field_type,
-                    cv.field_value,
-                    slots.slot_no
-                FROM custom_field_definitions fd
-                LEFT JOIN client_custom_field_slots slots
-                    ON slots.field_id = fd.id AND slots.client_id = %s
-                LEFT JOIN client_custom_field_link link
-                    ON link.field_id = fd.id AND link.client_id = %s
-                LEFT JOIN case_custom_values cv
-                    ON (cv.field_id = fd.id AND cv.case_id = %s)
-                WHERE slots.client_id IS NOT NULL OR link.client_id IS NOT NULL
-                ORDER BY COALESCE(slots.slot_no, 999), fd.field_name
-            """, (selected_case['client_id'], selected_case['client_id'], case_id))
+            # Fetch custom fields with compatibility fallback when slot table is not deployed yet.
+            try:
+                if _table_exists(c, 'client_custom_field_slots'):
+                    c.execute("""
+                        SELECT
+                            fd.id AS field_id,
+                            fd.field_name,
+                            fd.field_type,
+                            cv.field_value,
+                            slots.slot_no
+                        FROM custom_field_definitions fd
+                        LEFT JOIN client_custom_field_slots slots
+                            ON slots.field_id = fd.id AND slots.client_id = %s
+                        LEFT JOIN client_custom_field_link link
+                            ON link.field_id = fd.id AND link.client_id = %s
+                        LEFT JOIN case_custom_values cv
+                            ON (cv.field_id = fd.id AND cv.case_id = %s)
+                        WHERE slots.client_id IS NOT NULL OR link.client_id IS NOT NULL
+                        ORDER BY COALESCE(slots.slot_no, 999), fd.field_name
+                    """, (selected_case['client_id'], selected_case['client_id'], case_id))
+                else:
+                    c.execute("""
+                        SELECT
+                            fd.id AS field_id,
+                            fd.field_name,
+                            fd.field_type,
+                            cv.field_value,
+                            NULL::INTEGER AS slot_no
+                        FROM client_custom_field_link link
+                        JOIN custom_field_definitions fd ON link.field_id = fd.id
+                        LEFT JOIN case_custom_values cv ON (cv.field_id = fd.id AND cv.case_id = %s)
+                        WHERE link.client_id = %s
+                        ORDER BY fd.field_name
+                    """, (case_id, selected_case['client_id']))
+            except psycopg.errors.UndefinedTable:
+                # Production safety: if migration did not run yet, hard-fallback to legacy table.
+                c.execute("""
+                    SELECT
+                        fd.id AS field_id,
+                        fd.field_name,
+                        fd.field_type,
+                        cv.field_value,
+                        NULL::INTEGER AS slot_no
+                    FROM client_custom_field_link link
+                    JOIN custom_field_definitions fd ON link.field_id = fd.id
+                    LEFT JOIN case_custom_values cv ON (cv.field_id = fd.id AND cv.case_id = %s)
+                    WHERE link.client_id = %s
+                    ORDER BY fd.field_name
+                """, (case_id, selected_case['client_id']))
             custom_fields = c.fetchall()
 
 
@@ -542,19 +580,6 @@ def dashboard():
                 elif typ == 'Charge' and t['recoverable']:
                     balance += amt
                 totals[typ] = totals.get(typ, 0) + amt
-
-            c.execute("""
-                SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
-                FROM case_strategy cs
-                JOIN strategies s ON s.id = cs.strategy_id
-                WHERE cs.case_id = %s
-            """, (case_id,))
-            case_strategy_runtime = c.fetchone()
-            if case_strategy_runtime:
-                strategy_last_steps, strategy_next_steps = _strategy_timeline(
-                    case_strategy_runtime.get('definition_json'),
-                    case_strategy_runtime.get('step_index')
-                )
 
             c.execute("""
                 SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
