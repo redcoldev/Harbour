@@ -22,7 +22,7 @@
 
 
 
-    
+
 /* FLAT TEXT LINKS */
 .flat-action {
     color: rgb(227,82,5) !important;
@@ -104,28 +104,28 @@ h1,h2,h3,h4,h5,h6 {
 }
 
 /* MAIN LAYOUT - 4K RESPONSIVE SCALING */
-.container { 
-    display:flex; 
-    height:calc(100vh - 80px); 
+.container {
+    display:flex;
+    height:calc(100vh - 80px);
     /* Prevent squishing on small screens */
     min-width: 1000px;
 }
-.left { 
+.left {
     /* Base 60% with 5vw scaling for 4K */
-    width: calc(55% + 5vw); 
-    display:flex; 
-    flex-direction:column; 
+    width: calc(55% + 5vw);
+    display:flex;
+    flex-direction:column;
 }
 .right {
     /* Remaining width, scaling down from 40% with 5vw scaling */
-    width: calc(45% - 5vw); 
+    width: calc(45% - 5vw);
     background:#fff;
     border-left:1px solid #ddd;
     padding:15px;
     display:flex;
     flex-direction:column;
     /* Don't let the right panel get absurdly wide on huge monitors */
-    max-width: 1800px; 
+    max-width: 1800px;
 }
 
 /* INFO BOX - TIGHTER PADDING/MARGIN */
@@ -229,6 +229,24 @@ th { background:#f5f5f5; }
     margin-top:10px;
 }
 
+.strategy-ribbon {
+    margin:8px 15px 0 15px;
+    background:#fff;
+    border:1px solid #eaeaea;
+    border-radius:6px;
+    padding:8px 10px;
+}
+.strategy-ribbon-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+.strategy-list {
+    font-size:11px;
+    color:#333;
+    line-height:1.5;
+}
+
 /* ADD-BAR - REDUCED HEIGHT/PADDING */
 .add-bar-container {
     position:sticky;
@@ -297,8 +315,8 @@ th { background:#f5f5f5; }
     z-index:1000;
     pointer-events: none; /* Crucial for background interaction */
 }
-.modal.active { 
-    display:flex; 
+.modal.active {
+    display:flex;
     pointer-events: auto;
 }
 .modal-content {
@@ -324,7 +342,7 @@ th { background:#f5f5f5; }
     height: auto !important;
 }
 
-    
+
   </style>
 
     <style>
@@ -373,16 +391,16 @@ th { background:#f5f5f5; }
 
 
 
-  
+
 </head>
 <body>
 
   <div class="header">
-    
+
     <a href="{{ url_for('case.dashboard') }}">
   <img src="/static/helm-logo.png" alt="Helm" style="height:45px;">
 </a>
-    
+
 <div class="btn-group">
 
  <button class="btn" onclick="location.href='{{ url_for('case.dashboard') }}'">Home</button>
@@ -399,11 +417,11 @@ th { background:#f5f5f5; }
   </div>
 
 <button class="btn" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
-  
+
 </div>
 
 
-    
+
     <img src="/static/redwood-logo.png" alt="Redwood">
   </div>
 
@@ -423,18 +441,18 @@ th { background:#f5f5f5; }
 
 
 
-      
+
 {% if selected_case and case_client %}
 <h3 style="margin-top:30px; margin-left:15px; margin-bottom: 8px; font-size:1.4em;">Case Information</h3>
-<div class="info-box" style="display:grid; 
+<div class="info-box" style="display:grid;
      grid-template-columns:30% 30% 40%;   /* ← NEW WIDTHS */
-     gap:0; 
-     font-size:13px; 
-     line-height:1.35; 
-     background:none; 
-     border:none; 
-     overflow:hidden; 
-     padding:0; 
+     gap:0;
+     font-size:13px;
+     line-height:1.35;
+     background:none;
+     border:none;
+     overflow:hidden;
+     padding:0;
      margin:0 15px;">
 
   <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
@@ -456,7 +474,7 @@ th { background:#f5f5f5; }
 
   <div style="padding:12px 10px; background:#fff; border-right:1px solid #eaeaea; display:flex; flex-direction:column;">
     <div style="font-weight:bold; margin-bottom:2px; color:#E35205; font-size:12px;">Client</div>
-    
+
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
       <div>
         <div style="font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
@@ -465,7 +483,7 @@ th { background:#f5f5f5; }
         </div>
         <div style="color:#666; font-size:0.9em;">ID: {{ case_client.id }}</div>
       </div>
-      
+
       {% if case_client.id %}
         <img src="{{ url_for('static', filename='clientlogo/' ~ case_client.id ~ '.png') }}"
              alt="{{ case_client.business_name }} Logo"
@@ -473,7 +491,7 @@ th { background:#f5f5f5; }
              onerror="this.style.display='none'">
       {% endif %}
     </div>
-    
+
     <div style="line-height:1.55; flex:1;">
       {{ case_client.contact_first }} {{ case_client.contact_last }}<br>
       <a href="tel:{{ case_client.phone }}">{{ case_client.phone }}</a><br>
@@ -513,10 +531,10 @@ th { background:#f5f5f5; }
           <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:68%;">
             {{ c.debtor_business_name or (c.debtor_first ~ " " ~ c.debtor_last) }}
           </span>
-   
+
 <span style="color:#000; font-weight:normal;">{{ c.balance|money }}</span>
 
-          
+
           </span>
         </a>
       {% endfor %}
@@ -531,7 +549,7 @@ th { background:#f5f5f5; }
 </div>
 
 
-<div class="info-box" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:8px 15px 0 15px; background:#fff; border:1px solid #eaeaea; padding:10px 12px;">
+<div class="info-box" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin:8px 15px 0 15px; background:#fff; border:1px solid #eaeaea; padding:10px 12px;">
   <div>
     <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Current Step</div>
     <div style="font-size:14px; font-weight:600;">{{ derived_step_number if derived_step_number else '—' }}</div>
@@ -548,10 +566,57 @@ th { background:#f5f5f5; }
     <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Next Review</div>
     <div style="font-size:14px; font-weight:600;">{{ selected_case.next_action_date|default('—') }}</div>
   </div>
+  <div>
+    <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Mode</div>
+    <form action="{{ url_for('case.set_case_mode') }}" method="post" style="margin:0;">
+      <input type="hidden" name="case_id" value="{{ selected_case.id }}">
+      <select name="mode" onchange="this.form.submit()" style="width:100%; font-size:12px;">
+        <option value="automated" {% if selected_case.mode == 'automated' %}selected{% endif %}>Automated</option>
+        <option value="manual" {% if selected_case.mode == 'manual' %}selected{% endif %}>Manual</option>
+        <option value="legal_hold" {% if selected_case.mode == 'legal_hold' %}selected{% endif %}>Legal Hold</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="strategy-ribbon">
+  <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase; margin-bottom:5px;">Strategy Ribbon</div>
+  <div style="font-size:12px; margin-bottom:6px;">
+    <strong>Name:</strong> {{ case_strategy_runtime.strategy_name if case_strategy_runtime else 'No strategy set' }}
+    {% if case_strategy_runtime %}
+      <span style="color:#666; margin-left:8px;">Step {{ case_strategy_runtime.step_index or 0 }}</span>
+    {% endif %}
+  </div>
+  <div class="strategy-ribbon-grid">
+    <div>
+      <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#555;">Last 3 events</div>
+      <div class="strategy-list">
+      {% if strategy_last_steps %}
+        {% for step in strategy_last_steps %}
+          <div>• {{ step.code or step.status or 'Step' }}{% if step.substatus %} — {{ step.substatus }}{% endif %}</div>
+        {% endfor %}
+      {% else %}
+        <div>— No prior strategy events.</div>
+      {% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#555;">Next 3 events</div>
+      <div class="strategy-list">
+      {% if strategy_next_steps %}
+        {% for step in strategy_next_steps %}
+          <div>• {{ step.code or step.status or 'Step' }}{% if step.substatus %} — {{ step.substatus }}{% endif %}</div>
+        {% endfor %}
+      {% else %}
+        <div>— No upcoming strategy events.</div>
+      {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
 
-  
+
 </div>
 {% endif %}
 
@@ -567,8 +632,8 @@ th { background:#f5f5f5; }
 
 
 
-  
-      
+
+
       {% if not selected_case %}
       <div class="section">
 <div style="margin-bottom:15px;">
@@ -595,7 +660,7 @@ th { background:#f5f5f5; }
     {% endif %}
     <form id="customFieldsForm" action="{{ url_for('case.update_custom_field') }}" method="post">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-        
+
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
             {% if custom_fields %}
                 {% for field in custom_fields %}
@@ -603,8 +668,8 @@ th { background:#f5f5f5; }
                     <label style="font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 2px;">
                         {{ field.field_name }}
                     </label>
-                    <input type="{{ field.field_type if field.field_type else 'text' }}" 
-                           name="custom_field_{{ field.field_id }}" 
+                    <input type="{{ field.field_type if field.field_type else 'text' }}"
+                           name="custom_field_{{ field.field_id }}"
                            value="{{ field.field_value or '' }}"
                            class="custom-field-input"
                            readonly
@@ -620,11 +685,11 @@ th { background:#f5f5f5; }
     </form>
 </div>
 {% endif %}
-      
 
 
 
-        
+
+
         <h3 style="margin-left: 15px; margin-top: 29px;">Notes</h3>
         <div class="add-bar-container" style="position: static; border-top: none; padding: 0 15px 15px 15px; margin-top: 0;">
           <form class="add-bar notes-add-bar" action="/add_note" method="post">
@@ -662,24 +727,24 @@ th { background:#f5f5f5; }
                 <td class="note-text">{{ n.note }}</td>
                 <td>{{ n.username }}</td>
 
-                
+
 <td class="note-actions" style="text-align:center; white-space:nowrap;">
-  <a 
-    href="javascript:void(0)" 
+  <a
+    href="javascript:void(0)"
     class="flat-action"
     onclick="editNote({{ n.id }}, '{{ n.type|e }}', '{{ n.note|e }}')"
   >✏️</a>
 
   <span style="color:#ccc;">|</span>
 
-  <a 
-    href="javascript:deleteNote({{ n.id }})" 
+  <a
+    href="javascript:deleteNote({{ n.id }})"
     class="flat-action flat-del"
   >❌</a>
 </td>
 
 
-                
+
               </tr>
               {% endfor %}
             </tbody>
@@ -708,8 +773,8 @@ th { background:#f5f5f5; }
           BALANCE: {{ balance|money }}
         </div>
 
-      <h3 style="margin-top:5px; margin-left:0; margin-bottom:8px;">Transactions</h3>        
-        
+      <h3 style="margin-top:5px; margin-left:0; margin-bottom:8px;">Transactions</h3>
+
 <div class="add-bar-container">
   <form class="add-bar" action="{{ url_for('case.add_transaction') }}" method="post">
     <input type="hidden" name="case_id" value="{{ selected_case.id }}">
@@ -778,7 +843,7 @@ th { background:#f5f5f5; }
           <p style="text-align:center; color:#777; margin:20px 0;">No transactions yet</p>
           {% endif %}
         </div>
-        
+
       </div>
       {% endif %}
 
@@ -865,7 +930,7 @@ th { background:#f5f5f5; }
       <form id="noteEditForm" action="{{ url_for('case.edit_note') }}" method="post">
         <input type="hidden" name="note_id" id="editNoteId">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-        
+
         <label for="editNoteType" style="display:block; margin-top:10px; font-weight:bold;">Note Type:</label>
         <select name="type" id="editNoteType" required style="width:100%; margin-bottom:10px; height:32px; font-size:12px; padding:0 8px;">
           <option>General</option>
@@ -875,10 +940,10 @@ th { background:#f5f5f5; }
           <option>Email Received</option>
           <option>Letter Sent</option>
         </select>
-        
+
         <label for="editNoteText" style="display:block; margin-top:10px; font-weight:bold;">Note Content:</label>
         <textarea name="note" id="editNoteText" required style="width:100%; height:100px; padding:8px; box-sizing:border-box; font-size:12px;"></textarea>
-        
+
         <button type="submit" class="btn" style="width:100%; margin-top:15px; height:32px;">Save Changes</button>
       </form>
     </div>
@@ -891,13 +956,13 @@ th { background:#f5f5f5; }
       <form id="transEditForm" action="{{ url_for('case.edit_transaction') }}" method="post">
         <input type="hidden" name="trans_id" id="editTransId">
         <input type="hidden" name="case_id" value="{{ selected_case.id }}">
-        
+
         <label for="editTransAmount" style="display:block; margin-top:10px; font-weight:bold;">Amount:</label>
         <input type="number" name="amount" id="editTransAmount" step="0.01" required style="width:100%; margin-bottom:10px; height:32px; font-size:12px; padding:0 8px;">
 
         <label for="editTransNote" style="display:block; margin-top:10px; font-weight:bold;">Note:</label>
         <textarea name="note" id="editTransNote" style="width:100%; height:70px; padding:8px; box-sizing:border-box; font-size:12px;"></textarea>
-        
+
 {# ---- NEW: Only visible when editing a Charge ---- #}
 <div id="chargeOptions" style="margin-top:10px; display:flex; gap:15px; display:none;">
     <label>
@@ -950,7 +1015,7 @@ th { background:#f5f5f5; }
         })
         .catch(error => console.error('Search error:', error));
     }
-    
+
     // Transaction Logic
     document.getElementById('transType').addEventListener('change', function() {
         document.getElementById('chargeOpts').style.display = (this.value === 'Charge' ? 'grid' : 'none');
@@ -1086,19 +1151,19 @@ window.addEventListener('error', function(e) {
     <form id="renameForm" method="post">
       <input type="hidden" name="case_id" value="{{ selected_case.id if selected_case else '' }}">
       <input type="hidden" name="target_id" id="renameTargetId">
-      
+
       <div style="margin-bottom:15px;">
         <label id="renameLabel" style="display:block; margin-bottom:5px; font-weight:bold;">New Name:</label>
         <input type="text" name="new_name" id="renameInput" required style="width:100%; height:32px; padding:0 8px;">
       </div>
-      
+
       <button type="submit" class="btn" style="width:100%;">Save Changes</button>
     </form>
   </div>
 </div>
 
 
-  
+
 </body>
 </html>
 
