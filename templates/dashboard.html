@@ -531,6 +531,26 @@ th { background:#f5f5f5; }
 </div>
 
 
+<div class="info-box" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:8px 15px 0 15px; background:#fff; border:1px solid #eaeaea; padding:10px 12px;">
+  <div>
+    <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Current Step</div>
+    <div style="font-size:14px; font-weight:600;">{{ derived_step_number if derived_step_number else '—' }}</div>
+  </div>
+  <div>
+    <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Status</div>
+    <div style="font-size:14px; font-weight:600;">{{ selected_case.status or 'Open' }}</div>
+  </div>
+  <div>
+    <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Sub-status</div>
+    <div style="font-size:14px; font-weight:600;">{{ selected_case.substatus or '—' }}</div>
+  </div>
+  <div>
+    <div style="font-size:10px; font-weight:bold; color:#888; text-transform:uppercase;">Next Review</div>
+    <div style="font-size:14px; font-weight:600;">{{ selected_case.next_action_date|default('—') }}</div>
+  </div>
+</div>
+
+
   
 </div>
 {% endif %}
