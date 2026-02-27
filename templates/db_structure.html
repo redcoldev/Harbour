@@ -37,7 +37,7 @@
             font-size:14px;
             cursor:grab;
         }
-        .card-body { max-height:240px; overflow:auto; }
+        .card-body { height:240px; min-height:120px; max-height:70vh; overflow:auto; resize:vertical; }
         .fields { width:100%; border-collapse:collapse; font-size:12px; }
         .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
         .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
@@ -135,6 +135,44 @@ const cards = [...document.querySelectorAll('.table-card')];
 const canvas = document.getElementById('canvas');
 const svg = document.getElementById('linkLayer');
 const wrap = document.getElementById('canvasWrap');
+
+const STORAGE_KEY = 'harbour_db_structure_layout_v1';
+
+function saveLayout() {
+    const state = {};
+    cards.forEach(card => {
+        const table = card.dataset.table;
+        const body = card.querySelector('.card-body');
+        state[table] = {
+            left: card.style.left,
+            top: card.style.top,
+            bodyHeight: body ? body.style.height : null,
+        };
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadLayout() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    try {
+        const state = JSON.parse(raw);
+        let applied = false;
+        cards.forEach(card => {
+            const table = card.dataset.table;
+            const body = card.querySelector('.card-body');
+            if (!state[table]) return;
+            if (state[table].left) card.style.left = state[table].left;
+            if (state[table].top) card.style.top = state[table].top;
+            if (body && state[table].bodyHeight) body.style.height = state[table].bodyHeight;
+            applied = true;
+        });
+        return applied;
+    } catch (_) {
+        return false;
+    }
+}
+
 
 function defaultLayout() {
     const cols = 6;
@@ -257,27 +295,49 @@ function makeDraggable(card) {
     });
 
     window.addEventListener('mouseup', () => {
+        if (!active) return;
         active = false;
         header.style.cursor = 'grab';
+        saveLayout();
     });
 }
 
 function resetLayout() {
     defaultLayout();
+    localStorage.removeItem(STORAGE_KEY);
+    saveLayout();
     drawLinks();
 }
 
 window.resetLayout = resetLayout;
-defaultLayout();
+if (!loadLayout()) defaultLayout();
 cards.forEach(makeDraggable);
 
 cards.forEach(card => {
     const body = card.querySelector('.card-body');
-    if (body) body.addEventListener('scroll', drawLinks);
+    if (body) {
+        body.addEventListener('scroll', drawLinks);
+        body.addEventListener('mouseup', saveLayout);
+    }
 });
 if (wrap) wrap.addEventListener('scroll', drawLinks);
 window.addEventListener('resize', drawLinks);
-setTimeout(drawLinks, 100);
+
+if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(() => {
+        drawLinks();
+        saveLayout();
+    });
+    cards.forEach(card => {
+        const body = card.querySelector('.card-body');
+        if (body) ro.observe(body);
+    });
+}
+
+setTimeout(() => {
+    drawLinks();
+    saveLayout();
+}, 100);
 </script>
 </body>
 </html>
