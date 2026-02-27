@@ -23,11 +23,18 @@
         .table-card {
             position:absolute; 
             width:260px; 
+            height:300px;
+            min-height:170px;
+            max-height:75vh;
             background:#fff; 
             border:1px solid #9fb3c8; 
             border-radius:6px;
             box-shadow:0 2px 6px rgba(0,0,0,0.12); 
             user-select:none;
+            display:flex;
+            flex-direction:column;
+            overflow:hidden;
+            resize:vertical;
         }
         .card-header {
             padding:8px 10px; 
@@ -37,7 +44,7 @@
             font-size:14px;
             cursor:grab;
         }
-        .card-body { height:240px; min-height:120px; max-height:70vh; overflow:auto; resize:vertical; }
+        .card-body { flex:1; min-height:120px; overflow:auto; }
         .fields { width:100%; border-collapse:collapse; font-size:12px; }
         .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
         .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
@@ -122,12 +129,33 @@ const links = {{ links|tojson }};
 
 async function runDbCleanse() {
     if (!confirm('This will remove legacy tables (debtor_tokens, outbound_logs) and backfill default strategy runtime rows. Continue?')) return;
-    const res = await fetch('/api/db_cleanse', { method: 'POST' });
-    if (!res.ok) {
-        alert('DB cleanse failed');
+
+    let res;
+    try {
+        res = await fetch('/api/db_cleanse', { method: 'POST' });
+    } catch (err) {
+        alert(`DB cleanse request failed before reaching server.\n\n${err}`);
         return;
     }
-    const data = await res.json();
+
+    let payload = null;
+    let rawBody = '';
+    try {
+        rawBody = await res.text();
+        payload = rawBody ? JSON.parse(rawBody) : null;
+    } catch (_) {
+        payload = null;
+    }
+
+    if (!res.ok) {
+        const detail = (payload && (payload.error || payload.message))
+            ? (payload.error || payload.message)
+            : (rawBody || `HTTP ${res.status}`);
+        alert(`DB cleanse failed.\n\n${detail}`);
+        return;
+    }
+
+    const data = payload || {};
     alert(`DB cleanse complete.\nSeeded strategy: ${data.seeded_strategy}\nClients backfilled: ${data.clients_backfilled}\nCase strategies backfilled: ${data.case_strategy_backfilled}`);
     window.location.reload();
 }
@@ -146,7 +174,7 @@ function saveLayout() {
         state[table] = {
             left: card.style.left,
             top: card.style.top,
-            bodyHeight: body ? body.style.height : null,
+            height: card.style.height,
         };
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -164,7 +192,7 @@ function loadLayout() {
             if (!state[table]) return;
             if (state[table].left) card.style.left = state[table].left;
             if (state[table].top) card.style.top = state[table].top;
-            if (body && state[table].bodyHeight) body.style.height = state[table].bodyHeight;
+            if (state[table].height) card.style.height = state[table].height;
             applied = true;
         });
         return applied;
@@ -249,8 +277,11 @@ function drawLinks() {
         const c2x = sourceOnRight ? end.x - bend : end.x + bend;
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const goesToUser = String(l.source_table || '').toUpperCase() === 'USER' || String(l.target_table || '').toUpperCase() === 'USER';
+        const lineColor = goesToUser ? '#c8ced6' : '#4a6279';
+        const dotColor = goesToUser ? '#c8ced6' : '#36516d';
         path.setAttribute('d', `M ${start.x} ${start.y} C ${c1x} ${start.y}, ${c2x} ${end.y}, ${end.x} ${end.y}`);
-        path.setAttribute('stroke', '#4a6279');
+        path.setAttribute('stroke', lineColor);
         path.setAttribute('stroke-width', '1.8');
         path.setAttribute('fill', 'none');
         svg.appendChild(path);
@@ -259,14 +290,14 @@ function drawLinks() {
         startDot.setAttribute('cx', start.x);
         startDot.setAttribute('cy', start.y);
         startDot.setAttribute('r', '2.5');
-        startDot.setAttribute('fill', '#36516d');
+        startDot.setAttribute('fill', dotColor);
         svg.appendChild(startDot);
 
         const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         endDot.setAttribute('cx', end.x);
         endDot.setAttribute('cy', end.y);
         endDot.setAttribute('r', '2.5');
-        endDot.setAttribute('fill', '#36516d');
+        endDot.setAttribute('fill', dotColor);
         svg.appendChild(endDot);
     });
 
@@ -329,8 +360,7 @@ if ('ResizeObserver' in window) {
         saveLayout();
     });
     cards.forEach(card => {
-        const body = card.querySelector('.card-body');
-        if (body) ro.observe(body);
+        ro.observe(card);
     });
 }
 
