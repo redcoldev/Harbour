@@ -67,7 +67,10 @@
         <h1>Database Structure (Interactive)</h1>
         <p>Drag tables around. Links are auto-generated from foreign keys and are read-only.</p>
     </div>
+    <div style="display:flex; gap:8px;">
+    <button class="btn" onclick="runDbCleanse()">Run DB Cleanse</button>
     <button class="btn" onclick="resetLayout()">Reset Layout</button>
+</div>
 </div>
 
 <div class="layout">
@@ -116,6 +119,18 @@
 
 <script>
 const links = {{ links|tojson }};
+
+async function runDbCleanse() {
+    if (!confirm('This will remove legacy tables (debtor_tokens, outbound_logs) and backfill default strategy runtime rows. Continue?')) return;
+    const res = await fetch('/api/db_cleanse', { method: 'POST' });
+    if (!res.ok) {
+        alert('DB cleanse failed');
+        return;
+    }
+    const data = await res.json();
+    alert(`DB cleanse complete.\nSeeded strategy: ${data.seeded_strategy}\nClients backfilled: ${data.clients_backfilled}\nCase strategies backfilled: ${data.case_strategy_backfilled}`);
+    window.location.reload();
+}
 const cards = [...document.querySelectorAll('.table-card')];
 const canvas = document.getElementById('canvas');
 const svg = document.getElementById('linkLayer');
