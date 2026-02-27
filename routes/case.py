@@ -23,7 +23,10 @@ def _strategy_timeline(definition_json, step_index):
         steps = definition_json.get('steps') or []
     if not isinstance(steps, list):
         steps = []
-    idx = max(int(step_index or 0), 0)
+    try:
+        idx = max(int(step_index or 0), 0)
+    except (TypeError, ValueError):
+        idx = 0
     return steps[max(0, idx - 3):idx], steps[idx:idx + 3]
 
 # ----------------------------------------------------------------------
@@ -538,7 +541,20 @@ def dashboard():
                     balance += amt
                 elif typ == 'Charge' and t['recoverable']:
                     balance += amt
-                totals[typ] += amt
+                totals[typ] = totals.get(typ, 0) + amt
+
+            c.execute("""
+                SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
+                FROM case_strategy cs
+                JOIN strategies s ON s.id = cs.strategy_id
+                WHERE cs.case_id = %s
+            """, (case_id,))
+            case_strategy_runtime = c.fetchone()
+            if case_strategy_runtime:
+                strategy_last_steps, strategy_next_steps = _strategy_timeline(
+                    case_strategy_runtime.get('definition_json'),
+                    case_strategy_runtime.get('step_index')
+                )
 
             c.execute("""
                 SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
