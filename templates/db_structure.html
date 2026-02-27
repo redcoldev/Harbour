@@ -16,6 +16,9 @@
         .canvas { position:relative; width:2800px; height:1800px; background:#eef2f6; }
         .table-card {
             position:absolute; width:280px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
+        .canvas { position:relative; width:2600px; height:1600px; background:#eef2f6; }
+        .table-card {
+            position:absolute; width:260px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
             box-shadow:0 2px 6px rgba(0,0,0,0.12); user-select:none;
         }
         .card-header {
@@ -30,6 +33,12 @@
         .field-row.fk-target td:first-child { font-weight:700; color:#153d64; }
         .links-panel {
             width:360px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
+        .card-body { max-height:220px; overflow:auto; }
+        .fields { width:100%; border-collapse:collapse; font-size:12px; }
+        .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
+        .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
+        .links-panel {
+            width:340px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
         }
         .links-panel h3 { margin:4px 0 10px 0; }
         .link-item { font-size:12px; padding:6px 0; border-bottom:1px solid #eee; }
@@ -48,10 +57,10 @@
 
 <div class="layout">
     <div class="canvas-wrap" id="canvasWrap">
-        <div class="canvas" id="canvas" data-links="{{ links|tojson|forceescape }}">
+        <div class="canvas" id="canvas">
             <svg id="linkLayer"></svg>
             {% for table, columns in structure.items() %}
-            <div class="table-card" id="table-{{ table }}" data-table="{{ table }}" style="left: {{ 30 + (loop.index0 % 6) * 320 }}px; top: {{ 30 + (loop.index0 // 6) * 300 }}px;">
+            <div class="table-card" id="table-{{ table }}" data-table="{{ table }}">
                 <div class="card-header">{{ table }}</div>
                 <div class="card-body">
                     <table class="fields">
@@ -61,6 +70,7 @@
                         <tbody>
                         {% for col in columns %}
                             <tr class="field-row" data-table="{{ table }}" data-column="{{ col.column_name }}">
+                            <tr>
                                 <td>{{ col.column_name }}</td>
                                 <td>{{ col.data_type }}</td>
                             </tr>
@@ -89,7 +99,170 @@
     </aside>
 </div>
 
-<script src="{{ url_for('static', filename='db_structure.js') }}"></script>
+<script>
+const links = {{ links|tojson }};
+const cards = [...document.querySelectorAll('.table-card')];
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('linkLayer');
+const wrap = document.getElementById('canvasWrap');
 
+function defaultLayout() {
+    const cols = 6;
+    cards.forEach((card, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        card.style.left = (30 + col * 320) + 'px';
+        card.style.top = (30 + row * 300) + 'px';
+        card.style.left = (30 + col * 300) + 'px';
+        card.style.top = (30 + row * 280) + 'px';
+    });
+}
+
+function getCenter(el) {
+    const r = el.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    return { x: r.left - cr.left + r.width / 2, y: r.top - cr.top + r.height / 2 };
+}
+
+function getFieldRow(tableName, columnName) {
+    return canvas.querySelector(`.field-row[data-table="${CSS.escape(tableName)}"][data-column="${CSS.escape(columnName)}"]`);
+}
+
+function getFieldPoint(tableName, columnName, side) {
+    const row = getFieldRow(tableName, columnName);
+    if (!row) {
+        const fallback = document.getElementById('table-' + tableName);
+        if (!fallback) return null;
+        const p = getCenter(fallback);
+        return { ...p, row: null };
+    }
+
+    const rr = row.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    const x = side === 'left' ? (rr.left - cr.left) : (rr.right - cr.left);
+    const y = rr.top - cr.top + (rr.height / 2);
+    return { x, y, row };
+}
+
+function markLinkRows() {
+    document.querySelectorAll('.field-row.fk-source, .field-row.fk-target').forEach(r => {
+        r.classList.remove('fk-source', 'fk-target');
+    });
+
+    links.forEach(l => {
+        const src = getFieldRow(l.source_table, l.source_column);
+        const tgt = getFieldRow(l.target_table, l.target_column);
+        if (src) src.classList.add('fk-source');
+        if (tgt) tgt.classList.add('fk-target');
+    });
+}
+
+function drawLinks() {
+    svg.setAttribute('width', canvas.scrollWidth);
+    svg.setAttribute('height', canvas.scrollHeight);
+    svg.innerHTML = '';
+
+    links.forEach(l => {
+        const fromCard = document.getElementById('table-' + l.source_table);
+        const toCard = document.getElementById('table-' + l.target_table);
+        if (!fromCard || !toCard) return;
+
+        const fromCardCenter = getCenter(fromCard);
+        const toCardCenter = getCenter(toCard);
+        const sourceOnRight = toCardCenter.x >= fromCardCenter.x;
+
+        const start = getFieldPoint(l.source_table, l.source_column, sourceOnRight ? 'right' : 'left');
+        const end = getFieldPoint(l.target_table, l.target_column, sourceOnRight ? 'left' : 'right');
+        if (!start || !end) return;
+
+        const dx = Math.abs(end.x - start.x);
+        const bend = Math.max(45, Math.min(140, dx * 0.4));
+        const c1x = sourceOnRight ? start.x + bend : start.x - bend;
+        const c2x = sourceOnRight ? end.x - bend : end.x + bend;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${start.x} ${start.y} C ${c1x} ${start.y}, ${c2x} ${end.y}, ${end.x} ${end.y}`);
+        path.setAttribute('stroke', '#4a6279');
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+
+        const startDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        startDot.setAttribute('cx', start.x);
+        startDot.setAttribute('cy', start.y);
+        startDot.setAttribute('r', '2.4');
+        startDot.setAttribute('fill', '#36516d');
+        svg.appendChild(startDot);
+
+        const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        endDot.setAttribute('cx', end.x);
+        endDot.setAttribute('cy', end.y);
+        endDot.setAttribute('r', '2.4');
+        endDot.setAttribute('fill', '#36516d');
+        svg.appendChild(endDot);
+    });
+
+    markLinkRows();
+        const from = document.getElementById('table-' + l.source_table);
+        const to = document.getElementById('table-' + l.target_table);
+        if (!from || !to) return;
+        const p1 = getCenter(from);
+        const p2 = getCenter(to);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const c1x = p1.x + (p2.x - p1.x) * 0.35;
+        const c2x = p1.x + (p2.x - p1.x) * 0.65;
+        path.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${c2x} ${p2.y}, ${p2.x} ${p2.y}`);
+        path.setAttribute('stroke', '#5c6f82');
+        path.setAttribute('stroke-width', '1.4');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+    });
+}
+
+function makeDraggable(card) {
+    const header = card.querySelector('.card-header');
+    let active = false, ox = 0, oy = 0;
+
+    header.addEventListener('mousedown', (e) => {
+        active = true;
+        header.style.cursor = 'grabbing';
+        const r = card.getBoundingClientRect();
+        const cr = canvas.getBoundingClientRect();
+        ox = e.clientX - (r.left - cr.left);
+        oy = e.clientY - (r.top - cr.top);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!active) return;
+        const cr = canvas.getBoundingClientRect();
+        card.style.left = (e.clientX - cr.left - ox) + 'px';
+        card.style.top = (e.clientY - cr.top - oy) + 'px';
+        drawLinks();
+    });
+
+    window.addEventListener('mouseup', () => {
+        active = false;
+        header.style.cursor = 'grab';
+    });
+}
+
+function resetLayout() {
+    defaultLayout();
+    drawLinks();
+}
+
+window.resetLayout = resetLayout;
+defaultLayout();
+cards.forEach(makeDraggable);
+
+cards.forEach(card => {
+    const body = card.querySelector('.card-body');
+    if (body) body.addEventListener('scroll', drawLinks);
+});
+wrap.addEventListener('scroll', drawLinks);
+window.addEventListener('resize', drawLinks);
+setTimeout(drawLinks, 80);
+</script>
 </body>
 </html>
