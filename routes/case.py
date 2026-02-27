@@ -115,19 +115,23 @@ def add_case():
     row = c.fetchone()
     default_strategy_id = row['default_strategy_id'] if row else None
     if default_strategy_id:
-        c.execute("""
-            INSERT INTO case_strategy (case_id, strategy_id, step_index, next_action_date)
-            VALUES (%s, %s, 0, %s)
-            ON CONFLICT (case_id) DO NOTHING
-        """, (new_case_id, default_strategy_id, next_action_date or date.today().isoformat()))
+        try:
+            c.execute("""
+                INSERT INTO case_strategy (case_id, strategy_id, step_index, next_action_date)
+                VALUES (%s, %s, 0, %s)
+                ON CONFLICT (case_id) DO NOTHING
+            """, (new_case_id, default_strategy_id, next_action_date or date.today().isoformat()))
 
-        c.execute("SELECT name FROM strategies WHERE id = %s", (default_strategy_id,))
-        strategy_row = c.fetchone()
-        strategy_name = strategy_row['name'] if strategy_row else f"#{default_strategy_id}"
-        c.execute("""
-            INSERT INTO notes (case_id, type, note, created_by)
-            VALUES (%s, 'Strategy', %s, %s)
-        """, (new_case_id, f"Case entered strategy '{strategy_name}' at step 0.", current_user.id))
+            c.execute("SELECT name FROM strategies WHERE id = %s", (default_strategy_id,))
+            strategy_row = c.fetchone()
+            strategy_name = strategy_row['name'] if strategy_row else f"#{default_strategy_id}"
+            c.execute("""
+                INSERT INTO notes (case_id, type, note, created_by)
+                VALUES (%s, 'Strategy', %s, %s)
+            """, (new_case_id, f"Case entered strategy '{strategy_name}' at step 0.", current_user.id))
+        except psycopg.errors.UndefinedTable:
+            # Migration not fully applied yet; allow case creation without strategy runtime row.
+            pass
 
     db.commit()
     flash('Case added')
@@ -581,13 +585,17 @@ def dashboard():
                     balance += amt
                 totals[typ] = totals.get(typ, 0) + amt
 
-            c.execute("""
-                SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
-                FROM case_strategy cs
-                JOIN strategies s ON s.id = cs.strategy_id
-                WHERE cs.case_id = %s
-            """, (case_id,))
-            case_strategy_runtime = c.fetchone()
+            try:
+                c.execute("""
+                    SELECT cs.step_index, cs.next_action_date, cs.paused, s.name AS strategy_name, s.definition_json
+                    FROM case_strategy cs
+                    JOIN strategies s ON s.id = cs.strategy_id
+                    WHERE cs.case_id = %s
+                """, (case_id,))
+                case_strategy_runtime = c.fetchone()
+            except psycopg.errors.UndefinedTable:
+                case_strategy_runtime = None
+
             if case_strategy_runtime:
                 strategy_last_steps, strategy_next_steps = _strategy_timeline(
                     case_strategy_runtime.get('definition_json'),
