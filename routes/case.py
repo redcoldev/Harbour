@@ -390,6 +390,7 @@ def dashboard():
     transactions = []
     status_history = []
     custom_fields = [] # NEW
+    derived_step_number = None
     balance = 0.0
     totals = {'Invoice': 0, 'Payment': 0, 'Charge': 0, 'Interest': 0}
     page = int(request.args.get('page', 1))
@@ -467,6 +468,7 @@ def dashboard():
                 WHERE h.case_id = %s ORDER BY h.changed_at DESC
             ''', (case_id,))
             status_history = c.fetchall()
+            derived_step_number = len(status_history) + 1
 
             for t in transactions:
                 amt = float(t['amount'])
@@ -491,6 +493,7 @@ def dashboard():
                            transactions=transactions,
                            status_history=status_history,
                            custom_fields=custom_fields,
+                           derived_step_number=derived_step_number,
                            balance=round(balance, 2),
                            totals={k: round(v, 2) for k, v in totals.items()},
                            today_str=today_str,
