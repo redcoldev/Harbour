@@ -37,7 +37,7 @@
             font-size:14px;
             cursor:grab;
         }
-        .card-body { max-height:240px; overflow:auto; }
+        .card-body { height:240px; min-height:120px; max-height:70vh; overflow:auto; resize:vertical; }
         .fields { width:100%; border-collapse:collapse; font-size:12px; }
         .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
         .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
@@ -67,7 +67,10 @@
         <h1>Database Structure (Interactive)</h1>
         <p>Drag tables around. Links are auto-generated from foreign keys and are read-only.</p>
     </div>
+    <div style="display:flex; gap:8px;">
+    <button class="btn" onclick="runDbCleanse()">Run DB Cleanse</button>
     <button class="btn" onclick="resetLayout()">Reset Layout</button>
+</div>
 </div>
 
 <div class="layout">
@@ -116,10 +119,60 @@
 
 <script>
 const links = {{ links|tojson }};
+
+async function runDbCleanse() {
+    if (!confirm('This will remove legacy tables (debtor_tokens, outbound_logs) and backfill default strategy runtime rows. Continue?')) return;
+    const res = await fetch('/api/db_cleanse', { method: 'POST' });
+    if (!res.ok) {
+        alert('DB cleanse failed');
+        return;
+    }
+    const data = await res.json();
+    alert(`DB cleanse complete.\nSeeded strategy: ${data.seeded_strategy}\nClients backfilled: ${data.clients_backfilled}\nCase strategies backfilled: ${data.case_strategy_backfilled}`);
+    window.location.reload();
+}
 const cards = [...document.querySelectorAll('.table-card')];
 const canvas = document.getElementById('canvas');
 const svg = document.getElementById('linkLayer');
 const wrap = document.getElementById('canvasWrap');
+
+const STORAGE_KEY = 'harbour_db_structure_layout_v1';
+
+function saveLayout() {
+    const state = {};
+    cards.forEach(card => {
+        const table = card.dataset.table;
+        const body = card.querySelector('.card-body');
+        state[table] = {
+            left: card.style.left,
+            top: card.style.top,
+            bodyHeight: body ? body.style.height : null,
+        };
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadLayout() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    try {
+        const state = JSON.parse(raw);
+        let applied = false;
+        cards.forEach(card => {
+            const table = card.dataset.table;
+            const body = card.querySelector('.card-body');
+            if (!state[table]) return;
+            if (state[table].left) card.style.left = state[table].left;
+            if (state[table].top) card.style.top = state[table].top;
+            if (body && state[table].bodyHeight) body.style.height = state[table].bodyHeight;
+            applied = true;
+        });
+        return applied;
+    } catch (_) {
+        return false;
+    }
+}
+
 
 function defaultLayout() {
     const cols = 6;
@@ -195,9 +248,13 @@ function drawLinks() {
         const c1x = sourceOnRight ? start.x + bend : start.x - bend;
         const c2x = sourceOnRight ? end.x - bend : end.x + bend;
 
+        const isUserLink = (l.source_table === 'users' || l.target_table === 'users');
+        const linkColor = isUserLink ? '#b9c1c9' : '#4a6279';
+        const dotColor = isUserLink ? '#b9c1c9' : '#36516d';
+
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', `M ${start.x} ${start.y} C ${c1x} ${start.y}, ${c2x} ${end.y}, ${end.x} ${end.y}`);
-        path.setAttribute('stroke', '#4a6279');
+        path.setAttribute('stroke', linkColor);
         path.setAttribute('stroke-width', '1.8');
         path.setAttribute('fill', 'none');
         svg.appendChild(path);
@@ -206,14 +263,14 @@ function drawLinks() {
         startDot.setAttribute('cx', start.x);
         startDot.setAttribute('cy', start.y);
         startDot.setAttribute('r', '2.5');
-        startDot.setAttribute('fill', '#36516d');
+        startDot.setAttribute('fill', dotColor);
         svg.appendChild(startDot);
 
         const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         endDot.setAttribute('cx', end.x);
         endDot.setAttribute('cy', end.y);
         endDot.setAttribute('r', '2.5');
-        endDot.setAttribute('fill', '#36516d');
+        endDot.setAttribute('fill', dotColor);
         svg.appendChild(endDot);
     });
 
@@ -242,27 +299,49 @@ function makeDraggable(card) {
     });
 
     window.addEventListener('mouseup', () => {
+        if (!active) return;
         active = false;
         header.style.cursor = 'grab';
+        saveLayout();
     });
 }
 
 function resetLayout() {
     defaultLayout();
+    localStorage.removeItem(STORAGE_KEY);
+    saveLayout();
     drawLinks();
 }
 
 window.resetLayout = resetLayout;
-defaultLayout();
+if (!loadLayout()) defaultLayout();
 cards.forEach(makeDraggable);
 
 cards.forEach(card => {
     const body = card.querySelector('.card-body');
-    if (body) body.addEventListener('scroll', drawLinks);
+    if (body) {
+        body.addEventListener('scroll', drawLinks);
+        body.addEventListener('mouseup', saveLayout);
+    }
 });
 if (wrap) wrap.addEventListener('scroll', drawLinks);
 window.addEventListener('resize', drawLinks);
-setTimeout(drawLinks, 100);
+
+if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(() => {
+        drawLinks();
+        saveLayout();
+    });
+    cards.forEach(card => {
+        const body = card.querySelector('.card-body');
+        if (body) ro.observe(body);
+    });
+}
+
+setTimeout(() => {
+    drawLinks();
+    saveLayout();
+}, 100);
 </script>
 </body>
 </html>
