@@ -1,55 +1,174 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Database Structure</title>
+    <title>Database Structure Map</title>
     <style>
-        body { font-family: Arial; background:#f6f6f6; padding:20px; }
-        .table-box {
-            background:white;
-            padding:15px;
-            margin-bottom:20px;
-            border-radius:6px;
-            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        body { font-family: Arial, sans-serif; margin:0; background:#f3f5f7; }
+        .topbar {
+            background:#fff; border-bottom:1px solid #d9dee3; padding:12px 16px;
+            display:flex; align-items:center; justify-content:space-between;
         }
-        h2 { margin-top:0; }
-        table { width:100%; border-collapse:collapse; margin-top:10px; }
-        th, td {
-            padding:6px 10px;
-            border-bottom:1px solid #eee;
-            text-align:left;
-            font-size:14px;
+        .topbar h1 { margin:0; font-size:20px; }
+        .topbar p { margin:2px 0 0 0; color:#666; font-size:13px; }
+        .btn { background:#e35205; color:#fff; border:none; border-radius:4px; padding:8px 12px; cursor:pointer; }
+        .layout { display:flex; height:calc(100vh - 70px); }
+        .canvas-wrap { flex:1; position:relative; overflow:auto; }
+        .canvas { position:relative; width:2600px; height:1600px; background:#eef2f6; }
+        .table-card {
+            position:absolute; width:260px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
+            box-shadow:0 2px 6px rgba(0,0,0,0.12); user-select:none;
         }
-        th { background:#fafafa; }
-        a { color:#e35205; text-decoration:none; }
-        a:hover { text-decoration:underline; }
+        .card-header {
+            padding:8px 10px; background:#c9d7e4; border-bottom:1px solid #a8bccf; font-weight:700; font-size:14px;
+            cursor:grab;
+        }
+        .card-body { max-height:220px; overflow:auto; }
+        .fields { width:100%; border-collapse:collapse; font-size:12px; }
+        .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
+        .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
+        .links-panel {
+            width:340px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
+        }
+        .links-panel h3 { margin:4px 0 10px 0; }
+        .link-item { font-size:12px; padding:6px 0; border-bottom:1px solid #eee; }
+        .muted { color:#666; }
+        svg#linkLayer { position:absolute; inset:0; pointer-events:none; }
     </style>
 </head>
 <body>
-
-<h1>Database Structure</h1>
-<p>Showing all tables and fields in the live PostgreSQL database.</p>
-
-{% for table, columns in structure.items() %}
-<div class="table-box">
-    <h2 id="{{ table }}">{{ table }}</h2>
-    <table>
-        <tr>
-            <th>Column</th>
-            <th>Type</th>
-            <th>Nullable</th>
-            <th>Default</th>
-        </tr>
-        {% for col in columns %}
-        <tr>
-            <td>{{ col.column_name }}</td>
-            <td>{{ col.data_type }}</td>
-            <td>{{ col.is_nullable }}</td>
-            <td>{{ col.column_default }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+<div class="topbar">
+    <div>
+        <h1>Database Structure (Interactive)</h1>
+        <p>Drag tables around. Links are auto-generated from foreign keys and are read-only.</p>
+    </div>
+    <button class="btn" onclick="resetLayout()">Reset Layout</button>
 </div>
-{% endfor %}
 
+<div class="layout">
+    <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas" id="canvas">
+            <svg id="linkLayer"></svg>
+            {% for table, columns in structure.items() %}
+            <div class="table-card" id="table-{{ table }}" data-table="{{ table }}">
+                <div class="card-header">{{ table }}</div>
+                <div class="card-body">
+                    <table class="fields">
+                        <thead>
+                            <tr><th>Name</th><th>Type</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for col in columns %}
+                            <tr>
+                                <td>{{ col.column_name }}</td>
+                                <td>{{ col.data_type }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <aside class="links-panel">
+        <h3>Foreign Key Links</h3>
+        {% if links %}
+            {% for l in links %}
+            <div class="link-item">
+                <strong>{{ l.source_table }}.{{ l.source_column }}</strong>
+                <span class="muted">→</span>
+                <strong>{{ l.target_table }}.{{ l.target_column }}</strong>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">No foreign keys found in this schema.</p>
+        {% endif %}
+    </aside>
+</div>
+
+<script>
+const links = {{ links|tojson }};
+const cards = [...document.querySelectorAll('.table-card')];
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('linkLayer');
+
+function defaultLayout() {
+    const cols = 6;
+    cards.forEach((card, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        card.style.left = (30 + col * 300) + 'px';
+        card.style.top = (30 + row * 280) + 'px';
+    });
+}
+
+function getCenter(el) {
+    const r = el.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    return { x: r.left - cr.left + r.width / 2, y: r.top - cr.top + r.height / 2 };
+}
+
+function drawLinks() {
+    svg.setAttribute('width', canvas.scrollWidth);
+    svg.setAttribute('height', canvas.scrollHeight);
+    svg.innerHTML = '';
+
+    links.forEach(l => {
+        const from = document.getElementById('table-' + l.source_table);
+        const to = document.getElementById('table-' + l.target_table);
+        if (!from || !to) return;
+        const p1 = getCenter(from);
+        const p2 = getCenter(to);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const c1x = p1.x + (p2.x - p1.x) * 0.35;
+        const c2x = p1.x + (p2.x - p1.x) * 0.65;
+        path.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${c2x} ${p2.y}, ${p2.x} ${p2.y}`);
+        path.setAttribute('stroke', '#5c6f82');
+        path.setAttribute('stroke-width', '1.4');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+    });
+}
+
+function makeDraggable(card) {
+    const header = card.querySelector('.card-header');
+    let active = false, ox = 0, oy = 0;
+
+    header.addEventListener('mousedown', (e) => {
+        active = true;
+        header.style.cursor = 'grabbing';
+        const r = card.getBoundingClientRect();
+        const cr = canvas.getBoundingClientRect();
+        ox = e.clientX - (r.left - cr.left);
+        oy = e.clientY - (r.top - cr.top);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!active) return;
+        const cr = canvas.getBoundingClientRect();
+        card.style.left = (e.clientX - cr.left - ox) + 'px';
+        card.style.top = (e.clientY - cr.top - oy) + 'px';
+        drawLinks();
+    });
+
+    window.addEventListener('mouseup', () => {
+        active = false;
+        header.style.cursor = 'grab';
+    });
+}
+
+function resetLayout() {
+    defaultLayout();
+    drawLinks();
+}
+
+window.resetLayout = resetLayout;
+defaultLayout();
+cards.forEach(makeDraggable);
+window.addEventListener('resize', drawLinks);
+setTimeout(drawLinks, 80);
+</script>
 </body>
 </html>
