@@ -109,3 +109,5 @@ For each imported case:
 3. create `case_strategy` rows for existing cases
 4. change UI to read status/sub-status from strategy runtime
 5. deprecate manual status edits once stable
+
+See also: `docs/simplification-open-questions.md` for unresolved schema lock decisions.
