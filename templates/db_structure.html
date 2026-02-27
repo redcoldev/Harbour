@@ -1,55 +1,241 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Database Structure</title>
+    <title>Database Structure Map</title>
     <style>
-        body { font-family: Arial; background:#f6f6f6; padding:20px; }
-        .table-box {
-            background:white;
-            padding:15px;
-            margin-bottom:20px;
-            border-radius:6px;
-            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        body { font-family: Arial, sans-serif; margin:0; background:#f3f5f7; }
+        .topbar {
+            background:#fff; border-bottom:1px solid #d9dee3; padding:12px 16px;
+            display:flex; align-items:center; justify-content:space-between;
         }
-        h2 { margin-top:0; }
-        table { width:100%; border-collapse:collapse; margin-top:10px; }
-        th, td {
-            padding:6px 10px;
-            border-bottom:1px solid #eee;
-            text-align:left;
-            font-size:14px;
+        .topbar h1 { margin:0; font-size:20px; }
+        .topbar p { margin:2px 0 0 0; color:#666; font-size:13px; }
+        .btn { background:#e35205; color:#fff; border:none; border-radius:4px; padding:8px 12px; cursor:pointer; }
+        .layout { display:flex; height:calc(100vh - 70px); }
+        .canvas-wrap { flex:1; position:relative; overflow:auto; }
+        .canvas { position:relative; width:2800px; height:1800px; background:#eef2f6; }
+        .table-card {
+            position:absolute; width:280px; background:#fff; border:1px solid #9fb3c8; border-radius:6px;
+            box-shadow:0 2px 6px rgba(0,0,0,0.12); user-select:none;
         }
-        th { background:#fafafa; }
-        a { color:#e35205; text-decoration:none; }
-        a:hover { text-decoration:underline; }
+        .card-header {
+            padding:8px 10px; background:#c9d7e4; border-bottom:1px solid #a8bccf; font-weight:700; font-size:14px;
+            cursor:grab;
+        }
+        .card-body { max-height:240px; overflow:auto; }
+        .fields { width:100%; border-collapse:collapse; font-size:12px; }
+        .fields th, .fields td { padding:5px 8px; border-bottom:1px solid #eef1f4; text-align:left; }
+        .fields th { position:sticky; top:0; background:#f7fafc; z-index:1; }
+        .field-row.fk-source td:first-child,
+        .field-row.fk-target td:first-child { font-weight:700; color:#153d64; }
+        .links-panel {
+            width:360px; background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px 12px;
+        }
+        .links-panel h3 { margin:4px 0 10px 0; }
+        .link-item { font-size:12px; padding:6px 0; border-bottom:1px solid #eee; }
+        .muted { color:#666; }
+        svg#linkLayer { position:absolute; inset:0; pointer-events:none; }
     </style>
 </head>
 <body>
-
-<h1>Database Structure</h1>
-<p>Showing all tables and fields in the live PostgreSQL database.</p>
-
-{% for table, columns in structure.items() %}
-<div class="table-box">
-    <h2 id="{{ table }}">{{ table }}</h2>
-    <table>
-        <tr>
-            <th>Column</th>
-            <th>Type</th>
-            <th>Nullable</th>
-            <th>Default</th>
-        </tr>
-        {% for col in columns %}
-        <tr>
-            <td>{{ col.column_name }}</td>
-            <td>{{ col.data_type }}</td>
-            <td>{{ col.is_nullable }}</td>
-            <td>{{ col.column_default }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+<div class="topbar">
+    <div>
+        <h1>Database Structure (Interactive)</h1>
+        <p>Drag tables around. Links are auto-generated from foreign keys and are read-only.</p>
+    </div>
+    <button class="btn" onclick="resetLayout()">Reset Layout</button>
 </div>
-{% endfor %}
 
+<div class="layout">
+    <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas" id="canvas">
+            <svg id="linkLayer"></svg>
+            {% for table, columns in structure.items() %}
+            <div class="table-card" id="table-{{ table }}" data-table="{{ table }}">
+                <div class="card-header">{{ table }}</div>
+                <div class="card-body">
+                    <table class="fields">
+                        <thead>
+                            <tr><th>Name</th><th>Type</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for col in columns %}
+                            <tr class="field-row" data-table="{{ table }}" data-column="{{ col.column_name }}">
+                                <td>{{ col.column_name }}</td>
+                                <td>{{ col.data_type }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <aside class="links-panel">
+        <h3>Foreign Key Links</h3>
+        {% if links %}
+            {% for l in links %}
+            <div class="link-item">
+                <strong>{{ l.source_table }}.{{ l.source_column }}</strong>
+                <span class="muted">→</span>
+                <strong>{{ l.target_table }}.{{ l.target_column }}</strong>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">No foreign keys found in this schema.</p>
+        {% endif %}
+    </aside>
+</div>
+
+<script>
+const links = {{ links|tojson }};
+const cards = [...document.querySelectorAll('.table-card')];
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('linkLayer');
+const wrap = document.getElementById('canvasWrap');
+
+function defaultLayout() {
+    const cols = 6;
+    cards.forEach((card, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        card.style.left = (30 + col * 320) + 'px';
+        card.style.top = (30 + row * 300) + 'px';
+    });
+}
+
+function getCenter(el) {
+    const r = el.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    return { x: r.left - cr.left + r.width / 2, y: r.top - cr.top + r.height / 2 };
+}
+
+function getFieldRow(tableName, columnName) {
+    return canvas.querySelector(`.field-row[data-table="${CSS.escape(tableName)}"][data-column="${CSS.escape(columnName)}"]`);
+}
+
+function getFieldPoint(tableName, columnName, side) {
+    const row = getFieldRow(tableName, columnName);
+    if (!row) {
+        const fallback = document.getElementById('table-' + tableName);
+        if (!fallback) return null;
+        const p = getCenter(fallback);
+        return { ...p, row: null };
+    }
+
+    const rr = row.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    const x = side === 'left' ? (rr.left - cr.left) : (rr.right - cr.left);
+    const y = rr.top - cr.top + (rr.height / 2);
+    return { x, y, row };
+}
+
+function markLinkRows() {
+    document.querySelectorAll('.field-row.fk-source, .field-row.fk-target').forEach(r => {
+        r.classList.remove('fk-source', 'fk-target');
+    });
+
+    links.forEach(l => {
+        const src = getFieldRow(l.source_table, l.source_column);
+        const tgt = getFieldRow(l.target_table, l.target_column);
+        if (src) src.classList.add('fk-source');
+        if (tgt) tgt.classList.add('fk-target');
+    });
+}
+
+function drawLinks() {
+    svg.setAttribute('width', canvas.scrollWidth);
+    svg.setAttribute('height', canvas.scrollHeight);
+    svg.innerHTML = '';
+
+    links.forEach(l => {
+        const fromCard = document.getElementById('table-' + l.source_table);
+        const toCard = document.getElementById('table-' + l.target_table);
+        if (!fromCard || !toCard) return;
+
+        const fromCardCenter = getCenter(fromCard);
+        const toCardCenter = getCenter(toCard);
+        const sourceOnRight = toCardCenter.x >= fromCardCenter.x;
+
+        const start = getFieldPoint(l.source_table, l.source_column, sourceOnRight ? 'right' : 'left');
+        const end = getFieldPoint(l.target_table, l.target_column, sourceOnRight ? 'left' : 'right');
+        if (!start || !end) return;
+
+        const dx = Math.abs(end.x - start.x);
+        const bend = Math.max(45, Math.min(140, dx * 0.4));
+        const c1x = sourceOnRight ? start.x + bend : start.x - bend;
+        const c2x = sourceOnRight ? end.x - bend : end.x + bend;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${start.x} ${start.y} C ${c1x} ${start.y}, ${c2x} ${end.y}, ${end.x} ${end.y}`);
+        path.setAttribute('stroke', '#4a6279');
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+
+        const startDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        startDot.setAttribute('cx', start.x);
+        startDot.setAttribute('cy', start.y);
+        startDot.setAttribute('r', '2.4');
+        startDot.setAttribute('fill', '#36516d');
+        svg.appendChild(startDot);
+
+        const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        endDot.setAttribute('cx', end.x);
+        endDot.setAttribute('cy', end.y);
+        endDot.setAttribute('r', '2.4');
+        endDot.setAttribute('fill', '#36516d');
+        svg.appendChild(endDot);
+    });
+
+    markLinkRows();
+}
+
+function makeDraggable(card) {
+    const header = card.querySelector('.card-header');
+    let active = false, ox = 0, oy = 0;
+
+    header.addEventListener('mousedown', (e) => {
+        active = true;
+        header.style.cursor = 'grabbing';
+        const r = card.getBoundingClientRect();
+        const cr = canvas.getBoundingClientRect();
+        ox = e.clientX - (r.left - cr.left);
+        oy = e.clientY - (r.top - cr.top);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!active) return;
+        const cr = canvas.getBoundingClientRect();
+        card.style.left = (e.clientX - cr.left - ox) + 'px';
+        card.style.top = (e.clientY - cr.top - oy) + 'px';
+        drawLinks();
+    });
+
+    window.addEventListener('mouseup', () => {
+        active = false;
+        header.style.cursor = 'grab';
+    });
+}
+
+function resetLayout() {
+    defaultLayout();
+    drawLinks();
+}
+
+window.resetLayout = resetLayout;
+defaultLayout();
+cards.forEach(makeDraggable);
+
+cards.forEach(card => {
+    const body = card.querySelector('.card-body');
+    if (body) body.addEventListener('scroll', drawLinks);
+});
+wrap.addEventListener('scroll', drawLinks);
+window.addEventListener('resize', drawLinks);
+setTimeout(drawLinks, 80);
+</script>
 </body>
 </html>
